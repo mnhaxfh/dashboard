@@ -434,7 +434,6 @@ function updateLoadBadge(intensity){
   badge.textContent = formatClock(displayClockMinutes())+" · "+label;
 }
 
-/* ============ SỨC CHỨA GẮN VỚI NHÂN SỰ TRỰC ============ */
 // Ngoài giờ cao điểm, bệnh viện không bố trí đủ nhân sự tối đa -> sức chứa hiệu dụng giảm.
 function staffOnDuty(r, intensity){
   if(intensity < 0.3) return Math.max(1, r.baseStaff-1);
@@ -480,7 +479,6 @@ function computeSlaBreaches(){
     .sort((a,b)=> b.elapsed - a.elapsed);
 }
 
-/* ============ RENDER ============ */
 let lastRoomsState = [];
 
 function render(){
