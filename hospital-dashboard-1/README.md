@@ -6,6 +6,9 @@ Dự án demo dashboard vận hành khám bệnh.
 - data/: dữ liệu dùng chung (seed, mẫu)
 - docs/: tài liệu, sơ đồ, demo HTML tham chiếu
 
+chạy backend: uvicorn main:app --reload --port 8000
+chạy frontend: flutter run
+
 Phiên:
 
 Manh

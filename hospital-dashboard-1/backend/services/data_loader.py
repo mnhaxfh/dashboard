@@ -69,7 +69,6 @@ def get_supabase_client() -> Client:
     _client = create_client(url, key)
     return _client
 
-
 # 2. ĐỌC DỮ LIỆU TỪ SUPABASE
 def fetch_rooms() -> dict[int, dict]:
     """
@@ -167,7 +166,6 @@ def _step_to_room_entry(step: dict) -> dict:
         "completed_at": step.get("completed_at"),
     }
 
-
 def build_dashboard_dataset(
     target_date: Optional[str] = None,
 ) -> list[dict]:
@@ -212,7 +210,6 @@ def build_dashboard_dataset(
         })
 
     return dataset
-
 
 def get_patient_dashboard_record_by_id(
     patient_id: int,
