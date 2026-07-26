@@ -1,14 +1,5 @@
 """
-simulate_demo.py (v2)
-================
-Simulator chạy NỀN, độc lập với FastAPI backend — ghi thay đổi liên tục
-xuống Supabase để dashboard trông "sống": tổng số BN dao động theo nhịp
-ngày rút gọn, có phòng "quá tải" xoay vòng để tạo SLA alert thật, đổi
-phòng/trạng thái đủ nhanh để mỗi lần FE poll 5s đều thấy khác.
-
-------------------------------------------------------------------
 CHẠY:
-------------------------------------------------------------------
   cd backend/
   python3 simulate_demo.py
 
@@ -20,9 +11,6 @@ CHẠY:
     --actions-per-tick 2 4    số hành động mỗi tick (min max)
     --bottleneck-rotate 90    bao nhiêu giây đổi "phòng quá tải" 1 lần
     --sla-threshold 45        ngưỡng phút để tính SLA alert (khớp data_loader.py)
-
-Ctrl+C để dừng.
-------------------------------------------------------------------
 """
 
 from __future__ import annotations
@@ -129,6 +117,40 @@ def fetch_room_ids(client: Client) -> list[int]:
     return [r["room_id"] for r in res.data]
 
 
+_warned_missing_protocols = False
+_warned_missing_doctors = False
+
+
+def fetch_protocol_ids(client: Client) -> list[int]:
+    """patients.protocol_id thường là FK NOT NULL -> bảng protocols.
+    Nếu bảng không tồn tại hoặc lỗi, in cảnh báo 1 lần và trả về [] —
+    lúc đó action_admit_new_patient sẽ tự bỏ qua việc check-in mới
+    thay vì insert lỗi âm thầm."""
+    global _warned_missing_protocols
+    try:
+        res = client.table("protocols").select("protocol_id").execute()
+        return [r["protocol_id"] for r in res.data]
+    except Exception as e:
+        if not _warned_missing_protocols:
+            print(f"  !! Không lấy được protocol_id từ bảng 'protocols': {e}")
+            print("     -> Sẽ tạm dừng check-in bệnh nhân mới cho tới khi có protocol_id hợp lệ.")
+            _warned_missing_protocols = True
+        return []
+
+
+def fetch_doctor_ids(client: Client) -> list[int]:
+    """visit_steps.doctor_id thường là FK NOT NULL -> bảng doctors."""
+    global _warned_missing_doctors
+    try:
+        res = client.table("doctors").select("doctor_id").execute()
+        return [r["doctor_id"] for r in res.data]
+    except Exception as e:
+        if not _warned_missing_doctors:
+            print(f"  !! Không lấy được doctor_id từ bảng 'doctors': {e}")
+            _warned_missing_doctors = True
+        return []
+
+
 def patient_all_steps_done(client: Client, patient_id: int) -> bool:
     res = client.table("visit_steps").select("status").eq("patient_id", patient_id).execute()
     if not res.data:
@@ -164,9 +186,14 @@ def action_advance_step(client: Client, open_steps: list[dict], bottleneck_room:
     return f"BN{step['patient_id']} step {step['step_id']}: '{current}' -> '{nxt}'"
 
 
-def action_admit_new_patient(client: Client, room_ids: list[int]) -> Optional[str]:
+def action_admit_new_patient(client: Client, room_ids: list[int], protocol_ids: list[int], doctor_ids: list[int]) -> Optional[str]:
     if not room_ids:
         return None
+    if not protocol_ids:
+        # protocol_id là NOT NULL FK -> không có protocol hợp lệ thì không insert được,
+        # thà bỏ qua tick này còn hơn insert lỗi âm thầm.
+        return None
+
     patient = {
         "full_name": random.choice(FAKE_FULL_NAMES),
         "gender": random.choice(GENDERS),
@@ -176,30 +203,38 @@ def action_admit_new_patient(client: Client, room_ids: list[int]) -> Optional[st
         "check_in_time": iso(now_utc()),
         "discharge_time": None,
         "is_inpatient": False,
+        "protocol_id": random.choice(protocol_ids),
     }
     res = client.table("patients").insert(patient).execute()
     if not res.data:
         return None
     new_id = res.data[0]["patient_id"]
-    client.table("visit_steps").insert({
+
+    step = {
         "patient_id": new_id,
         "room_id": random.choice(room_ids),
         "status": STATUS_NONE,
         "queued_at": iso(now_utc()),
-    }).execute()
+    }
+    if doctor_ids:
+        step["doctor_id"] = random.choice(doctor_ids)
+    client.table("visit_steps").insert(step).execute()
     return f"Check-in mới: BN{new_id} ({patient['full_name']})"
 
 
-def action_add_next_step(client: Client, finished_patients: list[dict], room_ids: list[int]) -> Optional[str]:
+def action_add_next_step(client: Client, finished_patients: list[dict], room_ids: list[int], doctor_ids: list[int]) -> Optional[str]:
     if not finished_patients or not room_ids:
         return None
     patient = random.choice(finished_patients)
-    client.table("visit_steps").insert({
+    step = {
         "patient_id": patient["patient_id"],
         "room_id": random.choice(room_ids),
         "status": STATUS_NONE,
         "queued_at": iso(now_utc()),
-    }).execute()
+    }
+    if doctor_ids:
+        step["doctor_id"] = random.choice(doctor_ids)
+    client.table("visit_steps").insert(step).execute()
     return f"BN{patient['patient_id']} sang bước khám mới"
 
 
@@ -247,6 +282,9 @@ def run(args):
 
             # Xoay phòng "quá tải"
             room_ids = fetch_room_ids(client)
+            protocol_ids = fetch_protocol_ids(client)
+            doctor_ids = fetch_doctor_ids(client)
+
             if room_ids and (elapsed - last_bottleneck_switch >= args.bottleneck_rotate or bottleneck_room is None):
                 bottleneck_room = random.choice(room_ids)
                 last_bottleneck_switch = elapsed
@@ -267,36 +305,47 @@ def run(args):
 
             n_actions = random.randint(args.actions_min, args.actions_max)
             logs = []
+            errors = []
+
+            def safe_run(fn, *fn_args):
+                """Chạy 1 hành động, lỗi (nếu có) KHÔNG làm hỏng các hành động còn lại trong tick."""
+                try:
+                    return fn(*fn_args)
+                except Exception as e:
+                    errors.append(f"{fn.__name__}: {e}")
+                    return None
 
             for _ in range(n_actions):
                 r = random.random()
                 msg = None
                 if r < admit_prob:
-                    msg = action_admit_new_patient(client, room_ids)
+                    msg = safe_run(action_admit_new_patient, client, room_ids, protocol_ids, doctor_ids)
                 elif r < admit_prob + discharge_prob:
-                    msg = action_discharge_patient(client, finished_patients)
+                    msg = safe_run(action_discharge_patient, client, finished_patients)
                 elif r < admit_prob + discharge_prob + 0.15:
-                    msg = action_add_next_step(client, finished_patients, room_ids)
+                    msg = safe_run(action_add_next_step, client, finished_patients, room_ids, doctor_ids)
                 else:
-                    msg = action_advance_step(client, open_steps, bottleneck_room, bottleneck_skip_prob=0.75)
+                    msg = safe_run(action_advance_step, client, open_steps, bottleneck_room, 0.75)
                 if msg:
                     logs.append(msg)
 
             # Thỉnh thoảng seed 1 SLA alert thật để demo có cái để chỉ vào
             if random.random() < 0.08:
-                msg = action_seed_sla_alert(client, open_steps, args.sla_threshold)
+                msg = safe_run(action_seed_sla_alert, client, open_steps, args.sla_threshold)
                 if msg:
                     logs.append(msg)
 
             tick_count += 1
             level_label = "Cao điểm" if level > 0.65 else ("Bình thường" if level > 0.35 else "Thấp điểm")
             print(f"[{datetime.now():%H:%M:%S}] census={current_census} (target~{target}, {level_label}) "
-                  f"| {len(logs)} thay đổi")
+                  f"| {len(logs)} thay đổi" + (f" | {len(errors)} lỗi" if errors else ""))
             for m in logs:
                 print(f"    - {m}")
+            for e in errors:
+                print(f"    !! {e}")
 
         except Exception as e:
-            print(f"[{datetime.now():%H:%M:%S}] Lỗi tick: {e}")
+            print(f"[{datetime.now():%H:%M:%S}] Lỗi tick (ngoài vòng action): {e}")
 
         time.sleep(args.tick_interval)
 
