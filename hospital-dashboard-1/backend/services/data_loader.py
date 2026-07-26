@@ -69,6 +69,7 @@ def get_supabase_client() -> Client:
     _client = create_client(url, key)
     return _client
 
+
 # 2. ĐỌC DỮ LIỆU TỪ SUPABASE
 def fetch_rooms() -> dict[int, dict]:
     """
@@ -166,6 +167,7 @@ def _step_to_room_entry(step: dict) -> dict:
         "completed_at": step.get("completed_at"),
     }
 
+
 def build_dashboard_dataset(
     target_date: Optional[str] = None,
 ) -> list[dict]:
@@ -210,6 +212,7 @@ def build_dashboard_dataset(
         })
 
     return dataset
+
 
 def get_patient_dashboard_record_by_id(
     patient_id: int,
@@ -337,6 +340,34 @@ def compute_sla_alerts(
     return sorted(alerts, key=lambda x: x["waited_minutes"], reverse=True)
 
 
+def compute_average_wait_minutes(
+    dataset: list[dict],
+    now: Optional[datetime] = None,
+) -> float:
+    """
+    Thời gian CHỜ TRUNG BÌNH THỰC TẾ: trung bình 'waited' (tính từ queued_at)
+    của các visit_step CHƯA XONG (status != 'đã xong').
+
+    Khác với việc lấy (now - check_in_time) của toàn bộ bệnh nhân active —
+    cách đó đo "đã nằm viện bao lâu" chứ không phải "đang chờ ở bước nào đó
+    bao lâu", nên dễ bị kéo lệch bởi các bệnh nhân check-in từ lâu nhưng
+    chưa được cập nhật xuất viện.
+    """
+    now = now or datetime.now()
+    waits = []
+    for patient in dataset:
+        for s in patient["steps"]:
+            if s["status"] == STATUS_DONE:
+                continue
+            waited = _parse_minutes(s.get("queued_at"), now)
+            if waited is not None:
+                waits.append(waited)
+
+    if not waits:
+        return 0.0
+    return round(sum(waits) / len(waits), 1)
+
+
 def build_dashboard_summary(
     target_date: Optional[str] = None,
     sla_threshold_minutes: float = DEFAULT_SLA_THRESHOLD_MINUTES,
@@ -348,10 +379,13 @@ def build_dashboard_summary(
     dataset = build_dashboard_dataset(target_date)
     rooms_by_id = fetch_rooms()
 
+    kpis = compute_kpis(dataset)
+    kpis["average_waiting_minutes"] = compute_average_wait_minutes(dataset)
+
     return {
         "date": target_date or "realtime (BN chưa xuất viện)",
         "patients": dataset,
-        "kpis": compute_kpis(dataset),
+        "kpis": kpis,
         "rooms": compute_room_summary(dataset, rooms_by_id),
         "sla_alerts": compute_sla_alerts(dataset, sla_threshold_minutes),
     }

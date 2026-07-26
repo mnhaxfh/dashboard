@@ -26,7 +26,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _dashboardFuture = _loadDashboard();
     _patientSearchController.addListener(_onSearchChanged);
     _roomSearchController.addListener(_onSearchChanged);
-    _refreshTimer = Timer.periodic(const Duration(seconds: 5), (_) => _refresh());
+    _refreshTimer = Timer.periodic(
+      const Duration(seconds: 5),
+      (_) => _refresh(),
+    );
     _secondsTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!mounted) return;
       setState(() => _secondsSinceRefresh++);
@@ -207,10 +210,7 @@ class _DashboardContent extends StatelessWidget {
 }
 
 class _Header extends StatelessWidget {
-  const _Header({
-    required this.secondsSinceRefresh,
-    required this.onRefresh,
-  });
+  const _Header({required this.secondsSinceRefresh, required this.onRefresh});
 
   final int secondsSinceRefresh;
   final Future<void> Function() onRefresh;
@@ -279,9 +279,12 @@ class _KpiSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final openRooms = data.rooms.where((room) => room.isOpen).length;
-    final overloadedRooms = data.rooms.where((room) => room.isOverloaded).length;
-    final overloadPct =
-        openRooms == 0 ? 0 : ((overloadedRooms / openRooms) * 100).round();
+    final overloadedRooms = data.rooms
+        .where((room) => room.isOverloaded)
+        .length;
+    final overloadPct = openRooms == 0
+        ? 0
+        : ((overloadedRooms / openRooms) * 100).round();
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -289,10 +292,10 @@ class _KpiSection extends StatelessWidget {
         final columns = maxWidth >= 1100
             ? 5
             : maxWidth >= 760
-                ? 3
-                : maxWidth >= 520
-                    ? 2
-                    : 1;
+            ? 3
+            : maxWidth >= 520
+            ? 2
+            : 1;
         return GridView.count(
           crossAxisCount: columns,
           crossAxisSpacing: 14,
@@ -367,11 +370,7 @@ class _WaitStrip extends StatelessWidget {
         if (isWide) return Row(children: cards);
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            cards.first,
-            const SizedBox(height: 14),
-            cards.last,
-          ],
+          children: [cards.first, const SizedBox(height: 14), cards.last],
         );
       },
     );
@@ -516,10 +515,10 @@ class _RoomMiniGrid extends StatelessWidget {
         final color = !room.isOpen
             ? null
             : room.isOverloaded
-                ? _AppColors.danger
-                : room.waiting > 0 || room.inProgress > 0
-                    ? _AppColors.success
-                    : _AppColors.neutralSoft;
+            ? _AppColors.danger
+            : room.waiting > 0 || room.inProgress > 0
+            ? _AppColors.success
+            : _AppColors.neutralSoft;
         return Tooltip(
           message:
               '${room.displayId} - ${room.name}: ${room.isOpen ? '${room.waiting}/${room.effectiveCapacity} (nhân sự trực: ${room.staffOnDuty})' : 'đóng cửa'}',
@@ -841,10 +840,7 @@ class _RoomPanel extends StatelessWidget {
                 shrinkWrap: true,
                 itemCount: rooms.length,
                 itemBuilder: (context, index) {
-                  return _RoomTile(
-                    room: rooms[index],
-                    patients: patients,
-                  );
+                  return _RoomTile(room: rooms[index], patients: patients);
                 },
               ),
             ),
@@ -855,20 +851,28 @@ class _RoomPanel extends StatelessWidget {
 }
 
 class _RoomTile extends StatelessWidget {
-  const _RoomTile({
-    required this.room,
-    required this.patients,
-  });
+  const _RoomTile({required this.room, required this.patients});
 
   final _RoomSummary room;
   final List<_Patient> patients;
 
   @override
   Widget build(BuildContext context) {
-    final waitingIds = _patientIdsForRoom(room.roomId, patients, _VisitStatus.waiting);
-    final noneIds = _patientIdsForRoom(room.roomId, patients, _VisitStatus.none);
-    final progressIds =
-        _patientIdsForRoom(room.roomId, patients, _VisitStatus.progress);
+    final waitingIds = _patientIdsForRoom(
+      room.roomId,
+      patients,
+      _VisitStatus.waiting,
+    );
+    final noneIds = _patientIdsForRoom(
+      room.roomId,
+      patients,
+      _VisitStatus.none,
+    );
+    final progressIds = _patientIdsForRoom(
+      room.roomId,
+      patients,
+      _VisitStatus.progress,
+    );
     final allWaitingIds = [...noneIds, ...waitingIds];
 
     return ExpansionTile(
@@ -900,26 +904,38 @@ class _RoomTile extends StatelessWidget {
         const SizedBox(height: 10),
         Row(
           children: [
-            _RoomStat(label: 'Sức chứa vật lý', value: '${room.physicalCapacity}'),
-            _RoomStat(label: 'Sức chứa hiệu dụng', value: '${room.effectiveCapacity}'),
+            _RoomStat(
+              label: 'Sức chứa vật lý',
+              value: '${room.physicalCapacity}',
+            ),
+            _RoomStat(
+              label: 'Sức chứa hiệu dụng',
+              value: '${room.effectiveCapacity}',
+            ),
             _RoomStat(label: 'Đang chờ', value: '${room.waiting}'),
-            _RoomStat(label: 'Ngưỡng quá tải', value: '> ${room.overloadThreshold}'),
+            _RoomStat(
+              label: 'Ngưỡng quá tải',
+              value: '> ${room.overloadThreshold}',
+            ),
           ],
         ),
         const SizedBox(height: 12),
-        _IdGroup(label: 'ID đang chờ (${allWaitingIds.length})', ids: allWaitingIds),
+        _IdGroup(
+          label: 'ID đang chờ (${allWaitingIds.length})',
+          ids: allWaitingIds,
+        ),
         const SizedBox(height: 10),
-        _IdGroup(label: 'ID đang khám (${progressIds.length})', ids: progressIds),
+        _IdGroup(
+          label: 'ID đang khám (${progressIds.length})',
+          ids: progressIds,
+        ),
       ],
     );
   }
 }
 
 class _DashboardCard extends StatelessWidget {
-  const _DashboardCard({
-    required this.child,
-    required this.padding,
-  });
+  const _DashboardCard({required this.child, required this.padding});
 
   final Widget child;
   final EdgeInsets padding;
@@ -939,10 +955,7 @@ class _DashboardCard extends StatelessWidget {
 }
 
 class _PanelHeader extends StatelessWidget {
-  const _PanelHeader({
-    required this.title,
-    required this.count,
-  });
+  const _PanelHeader({required this.title, required this.count});
 
   final String title;
   final String count;
@@ -978,10 +991,7 @@ class _PanelHeader extends StatelessWidget {
 }
 
 class _SearchField extends StatelessWidget {
-  const _SearchField({
-    required this.controller,
-    required this.hintText,
-  });
+  const _SearchField({required this.controller, required this.hintText});
 
   final TextEditingController controller;
   final String hintText;
@@ -999,8 +1009,10 @@ class _SearchField extends StatelessWidget {
           isDense: true,
           filled: true,
           fillColor: _AppColors.neutralSoft,
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 10,
+          ),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8),
             borderSide: const BorderSide(color: _AppColors.border),
@@ -1086,11 +1098,7 @@ class _PulseDot extends StatelessWidget {
         color: _AppColors.success,
         shape: BoxShape.circle,
         boxShadow: [
-          BoxShadow(
-            color: Color(0x5517864F),
-            blurRadius: 8,
-            spreadRadius: 2,
-          ),
+          BoxShadow(color: Color(0x5517864F), blurRadius: 8, spreadRadius: 2),
         ],
       ),
     );
@@ -1098,10 +1106,7 @@ class _PulseDot extends StatelessWidget {
 }
 
 class _LegendDot extends StatelessWidget {
-  const _LegendDot({
-    required this.color,
-    required this.text,
-  });
+  const _LegendDot({required this.color, required this.text});
 
   final Color color;
   final String text;
@@ -1262,10 +1267,7 @@ class _MetaLine extends StatelessWidget {
 }
 
 class _DetailLine extends StatelessWidget {
-  const _DetailLine({
-    required this.label,
-    required this.chip,
-  });
+  const _DetailLine({required this.label, required this.chip});
 
   final String label;
   final Widget chip;
@@ -1294,10 +1296,7 @@ class _DetailLine extends StatelessWidget {
 }
 
 class _RoomStat extends StatelessWidget {
-  const _RoomStat({
-    required this.label,
-    required this.value,
-  });
+  const _RoomStat({required this.label, required this.value});
 
   final String label;
   final String value;
@@ -1328,10 +1327,7 @@ class _RoomStat extends StatelessWidget {
 }
 
 class _IdGroup extends StatelessWidget {
-  const _IdGroup({
-    required this.label,
-    required this.ids,
-  });
+  const _IdGroup({required this.label, required this.ids});
 
   final String label;
   final List<String> ids;
@@ -1367,8 +1363,10 @@ class _IdGroup extends StatelessWidget {
             children: ids
                 .map(
                   (id) => Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: _AppColors.surface,
                       borderRadius: BorderRadius.circular(6),
@@ -1410,10 +1408,7 @@ class _EmptyListLabel extends StatelessWidget {
 }
 
 class _ErrorState extends StatelessWidget {
-  const _ErrorState({
-    required this.message,
-    required this.onRetry,
-  });
+  const _ErrorState({required this.message, required this.onRetry});
 
   final String message;
   final Future<void> Function() onRetry;
@@ -1428,8 +1423,11 @@ class _ErrorState extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.warning_amber_rounded,
-                  color: _AppColors.danger, size: 32),
+              const Icon(
+                Icons.warning_amber_rounded,
+                color: _AppColors.danger,
+                size: 32,
+              ),
               const SizedBox(height: 10),
               const Text(
                 'Không tải được dashboard',
@@ -1521,7 +1519,11 @@ class _DayLoadPainter extends CustomPainter {
     }
 
     final nowY = size.height - pad - loadLevel * (size.height - pad * 2);
-    canvas.drawCircle(Offset(nowX, nowY), 4, Paint()..color = _AppColors.danger);
+    canvas.drawCircle(
+      Offset(nowX, nowY),
+      4,
+      Paint()..color = _AppColors.danger,
+    );
 
     final textPainter = TextPainter(textDirection: TextDirection.ltr);
     _paintChartLabel(canvas, textPainter, '06:00', Offset(2, 0));
@@ -1583,28 +1585,33 @@ class _DashboardData {
   final List<_SlaAlert> slaAlerts;
   final _Kpis kpis;
 
-  double get averageWaitingMinutes {
-    final active = patients.where((patient) => patient.dischargeTime == null);
-    final waits = active
-        .map((patient) => patient.elapsedMinutes)
-        .where((minutes) => minutes.isFinite)
-        .toList();
-    if (waits.isEmpty) return 0;
-    return waits.reduce((a, b) => a + b) / waits.length;
-  }
+  /// Thời gian chờ trung bình THỰC TẾ — lấy trực tiếp từ backend
+  /// (tính theo queued_at của các visit_step chưa xong, giống logic SLA alert),
+  /// KHÔNG còn tự tính bằng (now - check_in_time) như trước — cách cũ đo
+  /// "đã nằm viện bao lâu" nên bị các bệnh nhân check-in lâu nhưng chưa
+  /// xuất viện kéo lệch, khiến số liệu trông như đứng yên.
+  double get averageWaitingMinutes => kpis.averageWaitingMinutes;
 
   int get completedPatientCount {
     return patients
-        .where((patient) => patient.checkInTime != null && patient.dischargeTime != null)
+        .where(
+          (patient) =>
+              patient.checkInTime != null && patient.dischargeTime != null,
+        )
         .length;
   }
 
   double? get averageCompletedMinutes {
     final durations = patients
-        .where((patient) => patient.checkInTime != null && patient.dischargeTime != null)
-        .map(
+        .where(
           (patient) =>
-              patient.dischargeTime!.difference(patient.checkInTime!).inMinutes.abs(),
+              patient.checkInTime != null && patient.dischargeTime != null,
+        )
+        .map(
+          (patient) => patient.dischargeTime!
+              .difference(patient.checkInTime!)
+              .inMinutes
+              .abs(),
         )
         .toList();
     if (durations.isEmpty) return null;
@@ -1619,18 +1626,26 @@ class _Kpis {
     required this.waiting,
     required this.notStarted,
     required this.discharged,
+    required this.averageWaitingMinutes,
   });
 
   const _Kpis.empty()
-      : totalPatients = 0,
-        examining = 0,
-        waiting = 0,
-        notStarted = 0,
-        discharged = 0;
+    : totalPatients = 0,
+      examining = 0,
+      waiting = 0,
+      notStarted = 0,
+      discharged = 0,
+      averageWaitingMinutes = 0;
 
-  factory _Kpis.fromJson(Map<String, dynamic> json, {required List<_Patient> patients}) {
+  factory _Kpis.fromJson(
+    Map<String, dynamic> json, {
+    required List<_Patient> patients,
+  }) {
     return _Kpis(
-      totalPatients: _intValue(json['total_patients'], fallback: patients.length),
+      totalPatients: _intValue(
+        json['total_patients'],
+        fallback: patients.length,
+      ),
       examining: _intValue(
         json['patients_examining'],
         fallback: patients.where((patient) => patient.inProgress).length,
@@ -1638,6 +1653,9 @@ class _Kpis {
       waiting: _intValue(json['patients_waiting']),
       notStarted: _intValue(json['patients_not_started']),
       discharged: _intValue(json['patients_discharged']),
+      // Trung bình phút chờ THỰC TẾ (tính từ queued_at của các step chưa xong)
+      // — do backend tính, KHÔNG suy ra từ check_in_time ở client nữa.
+      averageWaitingMinutes: _doubleValue(json['average_waiting_minutes']),
     );
   }
 
@@ -1646,6 +1664,7 @@ class _Kpis {
   final int waiting;
   final int notStarted;
   final int discharged;
+  final double averageWaitingMinutes;
 }
 
 class _Patient {
@@ -1676,7 +1695,9 @@ class _Patient {
       totalSteps: _intValue(json['total_steps'], fallback: steps.length),
       completedSteps: _intValue(
         json['completed_steps'],
-        fallback: steps.where((step) => step.status == _VisitStatus.done).length,
+        fallback: steps
+            .where((step) => step.status == _VisitStatus.done)
+            .length,
       ),
     );
   }
@@ -1694,7 +1715,8 @@ class _Patient {
 
   String get displayId => 'BN$patientId';
   bool get isUrgent => _normalizeVietnamese(priority).contains('khan');
-  bool get inProgress => steps.any((step) => step.status == _VisitStatus.progress);
+  bool get inProgress =>
+      steps.any((step) => step.status == _VisitStatus.progress);
   String get priorityLabel => priority.isEmpty ? 'Thường' : priority;
   String get statusLabel => status.isEmpty ? 'Đang theo dõi' : status;
 
@@ -2138,7 +2160,10 @@ _RoomDefinition? _roomDefinitionById(int roomId) {
 
 List<Map<String, dynamic>> _asList(Object? value) {
   if (value is List) {
-    return value.whereType<Map>().map((item) => Map<String, dynamic>.from(item)).toList();
+    return value
+        .whereType<Map>()
+        .map((item) => Map<String, dynamic>.from(item))
+        .toList();
   }
   return [];
 }
