@@ -136,8 +136,7 @@ class _DashboardContent extends StatelessWidget {
     final roomQuery = roomSearchController.text.trim().toLowerCase();
     final filteredPatients = data.patients.where((patient) {
       return patientQuery.isEmpty ||
-          patient.displayId.toLowerCase().contains(patientQuery) ||
-          patient.fullName.toLowerCase().contains(patientQuery);
+          patient.displayId.toLowerCase().contains(patientQuery);
     }).toList();
     final filteredRooms = data.rooms.where((room) {
       return roomQuery.isEmpty ||
@@ -157,6 +156,8 @@ class _DashboardContent extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             _KpiSection(data: data),
+            const SizedBox(height: 14),
+            _OverloadRow(data: data),
             const SizedBox(height: 14),
             _WaitStrip(data: data),
             const SizedBox(height: 14),
@@ -279,21 +280,13 @@ class _KpiSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final openRooms = data.rooms.where((room) => room.isOpen).length;
-    final overloadedRooms = data.rooms
-        .where((room) => room.isOverloaded)
-        .length;
-    final overloadPct = openRooms == 0
-        ? 0
-        : ((overloadedRooms / openRooms) * 100).round();
 
     return LayoutBuilder(
       builder: (context, constraints) {
         final maxWidth = constraints.maxWidth;
-        final columns = maxWidth >= 1100
-            ? 5
-            : maxWidth >= 760
-            ? 3
-            : maxWidth >= 520
+        final columns = maxWidth >= 900
+            ? 4
+            : maxWidth >= 560
             ? 2
             : 1;
         return GridView.count(
@@ -325,15 +318,33 @@ class _KpiSection extends StatelessWidget {
               value: '$openRooms / ${data.rooms.length}',
               subText: 'trên tổng số phòng khám',
             ),
-            _OverloadCard(
-              percent: overloadPct,
-              overloadedRooms: overloadedRooms,
-              openRooms: openRooms,
-              rooms: data.rooms,
-            ),
           ],
         );
       },
+    );
+  }
+}
+
+class _OverloadRow extends StatelessWidget {
+  const _OverloadRow({required this.data});
+
+  final _DashboardData data;
+
+  @override
+  Widget build(BuildContext context) {
+    final openRooms = data.rooms.where((room) => room.isOpen).length;
+    final overloadedRooms = data.rooms
+        .where((room) => room.isOverloaded)
+        .length;
+    final overloadPct = openRooms == 0
+        ? 0
+        : ((overloadedRooms / openRooms) * 100).round();
+
+    return _OverloadCard(
+      percent: overloadPct,
+      overloadedRooms: overloadedRooms,
+      openRooms: openRooms,
+      rooms: data.rooms,
     );
   }
 }
@@ -505,10 +516,11 @@ class _RoomMiniGrid extends StatelessWidget {
       itemCount: rooms.length,
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 14,
+      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: 14,
         mainAxisSpacing: 3,
         crossAxisSpacing: 3,
+        childAspectRatio: 1.0, // Đảm bảo ô vuông
       ),
       itemBuilder: (context, index) {
         final room = rooms[index];
@@ -776,10 +788,6 @@ class _PatientTile extends StatelessWidget {
           _IdText(patient.displayId),
           const SizedBox(width: 10),
           _GenderTag(gender: patient.gender),
-          if (patient.isUrgent) ...[
-            const SizedBox(width: 8),
-            const _PriorityTag(),
-          ],
         ],
       ),
       trailing: Text(
@@ -790,7 +798,6 @@ class _PatientTile extends StatelessWidget {
         _MetaLine(
           children: [
             'Trạng thái: ${patient.statusLabel}',
-            'Ưu tiên: ${patient.priorityLabel}',
             'Check-in: ${_formatTime(patient.checkInTime)}',
           ],
         ),
@@ -1202,29 +1209,6 @@ class _GenderTag extends StatelessWidget {
   }
 }
 
-class _PriorityTag extends StatelessWidget {
-  const _PriorityTag();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-      decoration: BoxDecoration(
-        color: _AppColors.dangerSoft,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: const Text(
-        'Khẩn',
-        style: TextStyle(
-          color: _AppColors.danger,
-          fontSize: 10,
-          fontWeight: FontWeight.w800,
-        ),
-      ),
-    );
-  }
-}
-
 class _IdText extends StatelessWidget {
   const _IdText(this.text);
 
@@ -1525,6 +1509,27 @@ class _DayLoadPainter extends CustomPainter {
       Paint()..color = _AppColors.danger,
     );
 
+    final nowLabelPainter = TextPainter(
+      text: TextSpan(
+        text: _formatClock(DateTime.now()),
+        style: const TextStyle(
+          color: _AppColors.danger,
+          fontSize: 10,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    final labelX = (nowX - nowLabelPainter.width / 2)
+        .clamp(0.0, math.max(0.0, size.width - nowLabelPainter.width))
+        .toDouble();
+    // Đủ chỗ phía trên chấm thì đặt nhãn trên, không thì đặt xuống dưới —
+    // tránh nhãn bị tràn ra ngoài biểu đồ khi chấm nằm sát mép trên.
+    final labelY = nowY - nowLabelPainter.height - 4 >= pad
+        ? nowY - nowLabelPainter.height - 4
+        : nowY + 6.0;
+    nowLabelPainter.paint(canvas, Offset(labelX, labelY));
+
     final textPainter = TextPainter(textDirection: TextDirection.ltr);
     _paintChartLabel(canvas, textPainter, '06:00', Offset(2, 0));
     _paintChartLabel(canvas, textPainter, '20:00', Offset(size.width - 40, 0));
@@ -1670,9 +1675,7 @@ class _Kpis {
 class _Patient {
   const _Patient({
     required this.patientId,
-    required this.fullName,
     required this.gender,
-    required this.priority,
     required this.status,
     required this.checkInTime,
     required this.dischargeTime,
@@ -1685,9 +1688,7 @@ class _Patient {
     final steps = _asList(json['steps']).map(_VisitStep.fromJson).toList();
     return _Patient(
       patientId: _intValue(json['patient_id']),
-      fullName: _stringValue(json['full_name'], fallback: 'Bệnh nhân'),
       gender: _stringValue(json['gender'], fallback: 'M'),
-      priority: _stringValue(json['priority']),
       status: _stringValue(json['status']),
       checkInTime: _dateValue(json['check_in_time']),
       dischargeTime: _dateValue(json['discharge_time']),
@@ -1703,9 +1704,7 @@ class _Patient {
   }
 
   final int patientId;
-  final String fullName;
   final String gender;
-  final String priority;
   final String status;
   final DateTime? checkInTime;
   final DateTime? dischargeTime;
@@ -1714,10 +1713,8 @@ class _Patient {
   final int completedSteps;
 
   String get displayId => 'BN$patientId';
-  bool get isUrgent => _normalizeVietnamese(priority).contains('khan');
   bool get inProgress =>
       steps.any((step) => step.status == _VisitStatus.progress);
-  String get priorityLabel => priority.isEmpty ? 'Thường' : priority;
   String get statusLabel => status.isEmpty ? 'Đang theo dõi' : status;
 
   double get elapsedMinutes {
@@ -2014,7 +2011,6 @@ const _roomDefinitions = [
 class _SlaAlert {
   const _SlaAlert({
     required this.patientId,
-    required this.fullName,
     required this.roomId,
     required this.roomName,
     required this.waitedMinutes,
@@ -2023,7 +2019,6 @@ class _SlaAlert {
   factory _SlaAlert.fromJson(Map<String, dynamic> json) {
     return _SlaAlert(
       patientId: _intValue(json['patient_id']),
-      fullName: _stringValue(json['full_name']),
       roomId: _intValue(json['room_id']),
       roomName: _stringValue(json['room_name'], fallback: 'Phòng khám'),
       waitedMinutes: _doubleValue(json['waited_minutes']),
@@ -2031,7 +2026,6 @@ class _SlaAlert {
   }
 
   final int patientId;
-  final String fullName;
   final int roomId;
   final String roomName;
   final double waitedMinutes;

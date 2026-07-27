@@ -1,5 +1,14 @@
 """
+simulate_demo.py (v2)
+================
+Simulator chạy NỀN, độc lập với FastAPI backend — ghi thay đổi liên tục
+xuống Supabase để dashboard trông "sống": tổng số BN dao động theo nhịp
+ngày rút gọn, có phòng "quá tải" xoay vòng để tạo SLA alert thật, đổi
+phòng/trạng thái đủ nhanh để mỗi lần FE poll 5s đều thấy khác.
+
+------------------------------------------------------------------
 CHẠY:
+------------------------------------------------------------------
   cd backend/
   python3 simulate_demo.py
 
@@ -7,10 +16,15 @@ CHẠY:
     --day-length 480          8 phút thật = 1 "ngày" mô phỏng (mặc định)
     --min-census 15           số BN active thấp nhất trong ngày
     --max-census 55           số BN active cao nhất trong ngày (cao điểm)
-    --tick-interval 2         khoảng nghỉ giữa các tick (giây)
-    --actions-per-tick 2 4    số hành động mỗi tick (min max)
+    --tick-interval 1.2       khoảng nghỉ giữa các tick (giây) — nhỏ hơn = cập nhật nhanh hơn
+    --actions-per-tick 3 6    số hành động mỗi tick (min max)
     --bottleneck-rotate 90    bao nhiêu giây đổi "phòng quá tải" 1 lần
     --sla-threshold 45        ngưỡng phút để tính SLA alert (khớp data_loader.py)
+    --wave-interval 40        bao nhiêu giây có 1 đợt xuất viện hàng loạt
+    --wave-size 3 7           số BN xuất viện cùng lúc mỗi đợt (min max)
+
+Ctrl+C để dừng.
+------------------------------------------------------------------
 """
 
 from __future__ import annotations
@@ -39,14 +53,7 @@ NEXT_STATUS = {
     STATUS_WAITING: STATUS_DONE,
 }
 
-FAKE_FULL_NAMES = [
-    "Nguyễn Văn An", "Trần Thị Bình", "Lê Minh Cường", "Phạm Thị Dung",
-    "Hoàng Văn Em", "Vũ Thị Giang", "Đặng Minh Hải", "Bùi Thị Hoa",
-    "Ngô Văn Khang", "Đỗ Thị Lan", "Phan Văn Minh", "Trịnh Thị Nga",
-    "Lý Văn Phúc", "Đinh Thị Quỳnh", "Tô Văn Sơn", "Mai Thị Thu",
-]
 GENDERS = ["M", "F"]
-PRIORITIES = ["Thường", "Ưu tiên", "Khẩn"]
 
 
 def now_utc() -> datetime:
@@ -92,7 +99,7 @@ def target_census(level: float, min_c: int, max_c: int) -> int:
 def fetch_active_patients(client: Client) -> list[dict]:
     res = (
         client.table("patients")
-        .select("patient_id, full_name, status")
+        .select("patient_id, status")
         .is_("discharge_time", "null")
         .execute()
     )
@@ -117,25 +124,7 @@ def fetch_room_ids(client: Client) -> list[int]:
     return [r["room_id"] for r in res.data]
 
 
-_warned_missing_protocols = False
 _warned_missing_doctors = False
-
-
-def fetch_protocol_ids(client: Client) -> list[int]:
-    """patients.protocol_id thường là FK NOT NULL -> bảng protocols.
-    Nếu bảng không tồn tại hoặc lỗi, in cảnh báo 1 lần và trả về [] —
-    lúc đó action_admit_new_patient sẽ tự bỏ qua việc check-in mới
-    thay vì insert lỗi âm thầm."""
-    global _warned_missing_protocols
-    try:
-        res = client.table("protocols").select("protocol_id").execute()
-        return [r["protocol_id"] for r in res.data]
-    except Exception as e:
-        if not _warned_missing_protocols:
-            print(f"  !! Không lấy được protocol_id từ bảng 'protocols': {e}")
-            print("     -> Sẽ tạm dừng check-in bệnh nhân mới cho tới khi có protocol_id hợp lệ.")
-            _warned_missing_protocols = True
-        return []
 
 
 def fetch_doctor_ids(client: Client) -> list[int]:
@@ -186,24 +175,15 @@ def action_advance_step(client: Client, open_steps: list[dict], bottleneck_room:
     return f"BN{step['patient_id']} step {step['step_id']}: '{current}' -> '{nxt}'"
 
 
-def action_admit_new_patient(client: Client, room_ids: list[int], protocol_ids: list[int], doctor_ids: list[int]) -> Optional[str]:
+def action_admit_new_patient(client: Client, room_ids: list[int], doctor_ids: list[int]) -> Optional[str]:
     if not room_ids:
-        return None
-    if not protocol_ids:
-        # protocol_id là NOT NULL FK -> không có protocol hợp lệ thì không insert được,
-        # thà bỏ qua tick này còn hơn insert lỗi âm thầm.
         return None
 
     patient = {
-        "full_name": random.choice(FAKE_FULL_NAMES),
         "gender": random.choice(GENDERS),
-        "date_of_birth": f"{random.randint(1955, 2005)}-0{random.randint(1,9)}-1{random.randint(0,9)}",
-        "priority": random.choice(PRIORITIES),
         "status": "đang chờ",
         "check_in_time": iso(now_utc()),
         "discharge_time": None,
-        "is_inpatient": False,
-        "protocol_id": random.choice(protocol_ids),
     }
     res = client.table("patients").insert(patient).execute()
     if not res.data:
@@ -219,7 +199,7 @@ def action_admit_new_patient(client: Client, room_ids: list[int], protocol_ids: 
     if doctor_ids:
         step["doctor_id"] = random.choice(doctor_ids)
     client.table("visit_steps").insert(step).execute()
-    return f"Check-in mới: BN{new_id} ({patient['full_name']})"
+    return f"Check-in mới: BN{new_id}"
 
 
 def action_add_next_step(client: Client, finished_patients: list[dict], room_ids: list[int], doctor_ids: list[int]) -> Optional[str]:
@@ -246,7 +226,26 @@ def action_discharge_patient(client: Client, finished_patients: list[dict]) -> O
         "discharge_time": iso(now_utc()),
         "status": "đã xuất viện",
     }).eq("patient_id", patient["patient_id"]).execute()
-    return f"Xuất viện: BN{patient['patient_id']} ({patient['full_name']})"
+    return f"Xuất viện: BN{patient['patient_id']}"
+
+
+def action_discharge_wave(client: Client, finished_patients: list[dict], wave_min: int, wave_max: int) -> list[str]:
+    """Xả 1 loạt bệnh nhân đã xong CÙNG LÚC — mô phỏng 'giờ khám kết thúc/
+    có đợt trả kết quả' khiến số 'đang theo dõi' rớt mạnh trong 1 tick,
+    thay vì tụt từ từ từng người 1 — nhìn thật hơn nhiều so với discharge rải đều."""
+    if not finished_patients:
+        return []
+    n = min(len(finished_patients), random.randint(wave_min, wave_max))
+    chosen = random.sample(finished_patients, n)
+    now = iso(now_utc())
+    msgs = []
+    for patient in chosen:
+        client.table("patients").update({
+            "discharge_time": now,
+            "status": "đã xuất viện",
+        }).eq("patient_id", patient["patient_id"]).execute()
+        msgs.append(f"Xuất viện (đợt): BN{patient['patient_id']}")
+    return msgs
 
 
 def action_seed_sla_alert(client: Client, open_steps: list[dict], threshold_minutes: float) -> Optional[str]:
@@ -270,11 +269,12 @@ def run(args):
     start = time.monotonic()
     bottleneck_room = None
     last_bottleneck_switch = 0.0
+    last_wave = 0.0
     tick_count = 0
 
     print(f"[{datetime.now():%H:%M:%S}] Simulator v2 bắt đầu — Ctrl+C để dừng.")
     print(f"  Nhịp ngày rút gọn: {args.day_length}s/ngày | census {args.min_census}-{args.max_census} | "
-          f"bottleneck xoay mỗi {args.bottleneck_rotate}s\n")
+          f"bottleneck xoay mỗi {args.bottleneck_rotate}s | xả đợt mỗi ~{args.wave_interval}s\n")
 
     while True:
         try:
@@ -282,7 +282,6 @@ def run(args):
 
             # Xoay phòng "quá tải"
             room_ids = fetch_room_ids(client)
-            protocol_ids = fetch_protocol_ids(client)
             doctor_ids = fetch_doctor_ids(client)
 
             if room_ids and (elapsed - last_bottleneck_switch >= args.bottleneck_rotate or bottleneck_room is None):
@@ -319,7 +318,7 @@ def run(args):
                 r = random.random()
                 msg = None
                 if r < admit_prob:
-                    msg = safe_run(action_admit_new_patient, client, room_ids, protocol_ids, doctor_ids)
+                    msg = safe_run(action_admit_new_patient, client, room_ids, doctor_ids)
                 elif r < admit_prob + discharge_prob:
                     msg = safe_run(action_discharge_patient, client, finished_patients)
                 elif r < admit_prob + discharge_prob + 0.15:
@@ -328,6 +327,16 @@ def run(args):
                     msg = safe_run(action_advance_step, client, open_steps, bottleneck_room, 0.75)
                 if msg:
                     logs.append(msg)
+
+            # Xả đợt định kỳ — số 'đang theo dõi' rớt mạnh 1 phát, giống thật hơn
+            # nhiều so với discharge lẻ tẻ từng người.
+            wave_due = elapsed - last_wave >= args.wave_interval
+            if wave_due and len(finished_patients) >= args.wave_min:
+                wave_msgs = safe_run(action_discharge_wave, client, finished_patients, args.wave_min, args.wave_max) or []
+                logs.extend(wave_msgs)
+                last_wave = elapsed
+                if wave_msgs:
+                    print(f"[{datetime.now():%H:%M:%S}] >> Đợt xuất viện: {len(wave_msgs)} bệnh nhân cùng lúc")
 
             # Thỉnh thoảng seed 1 SLA alert thật để demo có cái để chỉ vào
             if random.random() < 0.08:
@@ -351,16 +360,19 @@ def run(args):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Simulator v2 — census dao động theo nhịp ngày + bottleneck SLA.")
+    parser = argparse.ArgumentParser(description="Simulator v2 — census dao động theo nhịp ngày + bottleneck SLA + xả đợt.")
     parser.add_argument("--day-length", type=float, default=480, help="Giây thật = 1 ngày mô phỏng")
     parser.add_argument("--min-census", type=int, default=15)
     parser.add_argument("--max-census", type=int, default=55)
-    parser.add_argument("--tick-interval", type=float, default=2.0)
-    parser.add_argument("--actions-per-tick", type=int, nargs=2, metavar=("MIN", "MAX"), default=[2, 4])
+    parser.add_argument("--tick-interval", type=float, default=1.2, help="Khoảng nghỉ giữa các tick (giây) — càng nhỏ càng cập nhật nhanh")
+    parser.add_argument("--actions-per-tick", type=int, nargs=2, metavar=("MIN", "MAX"), default=[3, 6])
     parser.add_argument("--bottleneck-rotate", type=float, default=90)
     parser.add_argument("--sla-threshold", type=float, default=45)
+    parser.add_argument("--wave-interval", type=float, default=40, help="Giây giữa 2 đợt xuất viện hàng loạt")
+    parser.add_argument("--wave-size", type=int, nargs=2, metavar=("MIN", "MAX"), default=[3, 7], help="Số BN xuất viện cùng lúc mỗi đợt")
     args = parser.parse_args()
     args.actions_min, args.actions_max = args.actions_per_tick
+    args.wave_min, args.wave_max = args.wave_size
 
     run(args)
 

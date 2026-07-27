@@ -1,7 +1,4 @@
 """
-data_loader.py
-================
-Lớp trung gian lấy dữ liệu cho DASHBOARD từ Supabase — khớp đúng schema thật:
   - patients      (patient_id int, ..., check_in_time, discharge_time, status, priority)
   - visit_steps   (step_id int, patient_id, room_id, doctor_id, status, queued_at, started_at, completed_at)
   - rooms         (room_id int, name, type, floor, physical_capacity, min_intensity_to_open)
@@ -44,11 +41,9 @@ STATUS_NONE = "chưa khám"
 STATUS_WAITING = "chờ kết quả"
 STATUS_PROGRESS = "đang khám"
 STATUS_DONE = "đã xong"
+DOCTOR_NAME_COLUMN = "full_name"
 
 DEFAULT_SLA_THRESHOLD_MINUTES = 45
-
-# Tên cột hiển thị của bác sĩ trong bảng `doctors`
-DOCTOR_NAME_COLUMN = "full_name"
 
 # 1. KẾT NỐI SUPABASE
 _client: Optional[Client] = None
@@ -98,8 +93,7 @@ def fetch_patients(
     """
     client = get_supabase_client()
     query = client.table("patients").select(
-        "patient_id, full_name, date_of_birth, gender, priority, protocol_id, "
-        "check_in_time, discharge_time, status, is_inpatient"
+        "patient_id, gender, check_in_time, discharge_time, status"
     )
 
     if target_date:
@@ -141,8 +135,7 @@ def fetch_patient_by_id(patient_id: int) -> Optional[dict]:
     client = get_supabase_client()
     res = (
         client.table("patients")
-        .select("patient_id, full_name, date_of_birth, gender, priority, status, "
-                "check_in_time, discharge_time")
+        .select("patient_id, gender, status, check_in_time, discharge_time")
         .eq("patient_id", patient_id)
         .limit(1)
         .execute()
@@ -178,8 +171,7 @@ def build_dashboard_dataset(
 
     Trả về list[dict], mỗi phần tử:
     {
-        "patient_id": 1001, "full_name": "...", "gender": "M", "date_of_birth": "...",
-        "priority": "Khẩn", "status": "đang chờ",
+        "patient_id": 1001, "gender": "M", "status": "đang chờ",
         "check_in_time": "...", "discharge_time": None,
         "steps": [ {step_id, room_id, room_name, room_type, doctor_name, status, ...}, ... ],
         "total_steps": 3, "completed_steps": 1, "in_progress": true
@@ -198,10 +190,7 @@ def build_dashboard_dataset(
         patient_steps = steps_by_patient.get(p["patient_id"], [])
         dataset.append({
             "patient_id": p["patient_id"],
-            "full_name": p["full_name"],
             "gender": p["gender"],
-            "date_of_birth": p["date_of_birth"],
-            "priority": p.get("priority"),
             "status": p.get("status"),
             "check_in_time": p.get("check_in_time"),
             "discharge_time": p.get("discharge_time"),
@@ -227,10 +216,7 @@ def get_patient_dashboard_record_by_id(
 
     return {
         "patient_id": patient["patient_id"],
-        "full_name": patient["full_name"],
         "gender": patient["gender"],
-        "date_of_birth": patient["date_of_birth"],
-        "priority": patient.get("priority"),
         "status": patient.get("status"),
         "check_in_time": patient.get("check_in_time"),
         "discharge_time": patient.get("discharge_time"),
@@ -331,7 +317,6 @@ def compute_sla_alerts(
             if waited is not None and waited >= threshold_minutes:
                 alerts.append({
                     "patient_id": patient["patient_id"],
-                    "full_name": patient["full_name"],
                     "room_id": s["room_id"],
                     "room_name": s["room_name"],
                     "waited_minutes": round(waited, 1),
