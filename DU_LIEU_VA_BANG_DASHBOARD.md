@@ -7,8 +7,6 @@
 |---|---|
 | `patient_id` | Mã bệnh nhân (VD: BN1005) |
 | `gender` | Giới tính (Nam/Nữ) — quyết định phác đồ áp dụng |
-| `protocol_id` / `protocol_label` | Phác đồ điều trị (VD: IUI, IVF, Khám nam khoa...) |
-| `priority` | Mức ưu tiên: Hẹn trước / Walk-in / Khẩn |
 | `check_in_time` | Thời điểm bệnh nhân đến, dùng để tính thời gian chờ |
 | `discharge_time` | Thời điểm xuất viện (null nếu chưa xong) |
 | `status` | Đang khám / Đã xuất viện |
@@ -32,13 +30,6 @@
 | `effective_capacity` | Sức chứa hiệu dụng = min(sức chứa vật lý, nhân sự × 2) |
 | `min_intensity_to_open` | Ngưỡng tải tối thiểu để phòng mở cửa |
 
-### Phác đồ điều trị (Protocol)
-| Trường | Mô tả |
-|---|---|
-| `protocol_id` | Mã phác đồ |
-| `name` | Tên phác đồ (VD: IVF - OPU + chuyển phôi) |
-| `applicable_gender` | Áp dụng cho Nam/Nữ |
-| `room_sequence` | Danh sách phòng phải đi qua, theo đúng thứ tự |
 
 ### Cảnh báo SLA
 | Trường | Mô tả |
