@@ -1,5 +1,3 @@
-# API tổng hợp KPI, SLA, room-grid cho FE
-
 from fastapi import APIRouter, HTTPException, Query, Response
 from typing import Optional
 
