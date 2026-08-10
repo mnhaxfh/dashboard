@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hospital DB Admin</title>
+<style>
+:root{
+  --bg:#0f1720;
+  --panel:#121b26;
+  --panel-2:#182232;
+  --line:#243244;
+  --text:#e6edf3;
+  --muted:#8da0b3;
+  --accent:#4fd1c5;
+  --accent-2:#7c9cff;
+  --danger:#f87171;
+  --warn:#fbbf24;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:Segoe UI,system-ui,sans-serif;background:linear-gradient(180deg,#0b1118 0%,#0f1720 45%,#101826 100%);color:var(--text)}
+.wrap{max-width:1280px;margin:0 auto;padding:24px}
+.top{display:flex;justify-content:space-between;gap:16px;align-items:flex-end;flex-wrap:wrap;margin-bottom:18px}
+h1{margin:0;font-size:24px;letter-spacing:.2px}
+.sub{color:var(--muted);margin-top:6px}
+.badge{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid var(--line);background:rgba(255,255,255,.03);border-radius:999px;color:var(--muted);font-size:13px}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 0 rgba(79,209,197,.35);animation:pulse 2s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(79,209,197,.35)}70%{box-shadow:0 0 0 10px rgba(79,209,197,0)}100%{box-shadow:0 0 0 0 rgba(79,209,197,0)}}
+.panel{background:rgba(18,27,38,.92);border:1px solid var(--line);border-radius:16px;box-shadow:0 12px 30px rgba(0,0,0,.24);overflow:hidden}
+.toolbar{padding:16px;border-bottom:1px solid var(--line);display:grid;gap:12px;grid-template-columns:repeat(6,minmax(0,1fr)) auto}
+.toolbar input,.toolbar select,.toolbar button{width:100%;border-radius:10px;border:1px solid var(--line);background:var(--panel-2);color:var(--text);padding:10px 12px;font-size:14px;outline:none}
+.toolbar input::placeholder{color:#6d7f92}
+.toolbar button{cursor:pointer;background:linear-gradient(135deg,var(--accent),var(--accent-2));border:none;color:#071018;font-weight:700}
+.toolbar button.secondary{background:transparent;color:var(--text);border:1px solid var(--line)}
+.stats{padding:14px 16px;display:flex;gap:12px;flex-wrap:wrap;border-bottom:1px solid var(--line)}
+.stat{padding:10px 12px;border:1px solid var(--line);background:rgba(255,255,255,.02);border-radius:12px;min-width:150px}
+.stat b{display:block;font-size:18px;margin-bottom:4px}
+.tableWrap{overflow:auto}
+table{width:100%;border-collapse:collapse;min-width:980px}
+th,td{padding:12px 14px;border-bottom:1px solid var(--line);text-align:left;font-size:14px;vertical-align:top}
+th{position:sticky;top:0;background:#162131;color:#cde2f3;font-size:12px;text-transform:uppercase;letter-spacing:.08em;z-index:1}
+tr:hover td{background:rgba(255,255,255,.02)}
+.code{font-family:Consolas,Monaco,monospace;font-size:13px;color:#dbeafe}
+.tag{display:inline-flex;padding:4px 8px;border-radius:999px;font-size:12px;font-weight:700}
+.tag.progress{background:rgba(79,209,197,.12);color:var(--accent)}
+.tag.waiting{background:rgba(251,191,36,.12);color:var(--warn)}
+.tag.done{background:rgba(34,197,94,.12);color:#34d399}
+.tag.none{background:rgba(148,163,184,.12);color:#cbd5e1}
+.tag.error{background:rgba(248,113,113,.12);color:var(--danger)}
+.muted{color:var(--muted)}
+.footer{padding:14px 16px;color:var(--muted);font-size:13px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+@media (max-width:1100px){.toolbar{grid-template-columns:repeat(2,minmax(0,1fr));}.toolbar button{grid-column:span 2}}
+@media (max-width:700px){.wrap{padding:14px}.toolbar{grid-template-columns:1fr}.toolbar button{grid-column:auto}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div>
+      <h1>Hospital DB Admin</h1>
+      <div class="sub">Xem nhanh dữ liệu <span class="code">touchpoints</span> từ SQLite qua API.</div>
+    </div>
+    <div class="badge"><span class="dot"></span><span id="connectionState">Backend chưa kiểm tra</span></div>
+  </div>
+
+  <div class="panel">
+    <div class="toolbar">
+      <input id="q" placeholder="Tìm kiếm event_id / patient / room / action">
+      <input id="patient_id" placeholder="patient_id ví dụ BN1014">
+      <input id="room_id" placeholder="room_id ví dụ P101">
+      <select id="action">
+        <option value="">Tất cả action</option>
+        <option value="progress">progress</option>
+        <option value="waiting">waiting</option>
+        <option value="done">done</option>
+        <option value="none">none</option>
+      </select>
+      <input id="from" type="datetime-local" title="Từ thời điểm">
+      <input id="to" type="datetime-local" title="Đến thời điểm">
+      <button id="searchBtn">Tìm</button>
+      <button class="secondary" id="resetBtn" type="button">Reset</button>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><b id="totalRows">0</b><span class="muted">số dòng trả về</span></div>
+      <div class="stat"><b id="limitInfo">100</b><span class="muted">giới hạn mỗi lần đọc</span></div>
+      <div class="stat"><b id="lastQuery">-</b><span class="muted">truy vấn gần nhất</span></div>
+    </div>
+
+    <div class="tableWrap">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Event</th>
+            <th>Patient</th>
+            <th>Room</th>
+            <th>Action</th>
+            <th>Timestamp</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+
+    <div class="footer">
+      <div>API: <span class="code">/api/touchpoints</span> hoặc <span class="code">/api/history</span></div>
+      <div>Gợi ý: refresh trang khi đang mở backend local để đọc DB mới nhất.</div>
+    </div>
+  </div>
+</div>
+<script>
+const tbody = document.getElementById('tbody');
+const totalRows = document.getElementById('totalRows');
+const lastQuery = document.getElementById('lastQuery');
+const limitInfo = document.getElementById('limitInfo');
+const connectionState = document.getElementById('connectionState');
+
+function toLocalDatetime(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  const offset = date.getTimezoneOffset();
+  const local = new Date(date.getTime() - offset * 60000);
+  return local.toISOString().slice(0, 16);
+}
+
+function statusTag(action) {
+  return `<span class="tag ${action || 'none'}">${action || 'none'}</span>`;
+}
+
+function buildQuery() {
+  const params = new URLSearchParams();
+  const q = document.getElementById('q').value.trim();
+  const patient_id = document.getElementById('patient_id').value.trim();
+  const room_id = document.getElementById('room_id').value.trim();
+  const action = document.getElementById('action').value.trim();
+  const from = document.getElementById('from').value;
+  const to = document.getElementById('to').value;
+
+  if (q) params.set('q', q);
+  if (patient_id) params.set('patient_id', patient_id);
+  if (room_id) params.set('room_id', room_id);
+  if (action) params.set('action', action);
+  if (from) params.set('from', new Date(from).toISOString());
+  if (to) params.set('to', new Date(to).toISOString());
+  params.set('limit', '200');
+  return params;
+}
+
+async function loadRows() {
+  const params = buildQuery();
+  const query = params.toString();
+  lastQuery.textContent = query || '(mặc định)';
+  limitInfo.textContent = params.get('limit') || '100';
+
+  try {
+    const response = await fetch(`/api/touchpoints?${query}`);
+    const result = await response.json();
+    if (!response.ok || result.status !== 'success') {
+      throw new Error(result.message || 'Không thể tải dữ liệu');
+    }
+
+    const rows = result.data || [];
+    totalRows.textContent = rows.length;
+    connectionState.textContent = 'Backend online';
+
+    tbody.innerHTML = rows.map(row => `
+      <tr>
+        <td class="code">${row.id}</td>
+        <td class="code">${row.event_id || ''}</td>
+        <td class="code">${row.patient_id || ''}</td>
+        <td class="code">${row.room_id || ''}</td>
+        <td>${statusTag(row.action)}</td>
+        <td class="code">${row.timestamp || ''}</td>
+      </tr>
+    `).join('') || '<tr><td colspan="6" class="muted">Không có dữ liệu phù hợp.</td></tr>';
+  } catch (error) {
+    connectionState.textContent = 'Không kết nối được backend';
+    tbody.innerHTML = `<tr><td colspan="6" class="muted">${error.message}</td></tr>`;
+  }
+}
+
+function resetFilters() {
+  document.getElementById('q').value = '';
+  document.getElementById('patient_id').value = '';
+  document.getElementById('room_id').value = '';
+  document.getElementById('action').value = '';
+  document.getElementById('from').value = '';
+  document.getElementById('to').value = '';
+  loadRows();
+}
+
+document.getElementById('searchBtn').addEventListener('click', loadRows);
+document.getElementById('resetBtn').addEventListener('click', resetFilters);
+document.addEventListener('keydown', event => {
+  if (event.key === 'Enter') loadRows();
+});
+
+loadRows();
+</script>
+</body>
+</html>

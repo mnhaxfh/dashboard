@@ -2,4 +2,5 @@ docs/
 
 .env
 __pycache__/
-*.db
+*.db
+node_modules/

@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Bảng điều khiển vận hành khám bệnh — Smart Hospital</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap');
+    :root{--bg:#F4F7F8;--surface:#FFFFFF;--border:#E1E7EA;--ink:#0F2027;--subtle:#64777E;--accent:#0E6E6E;--accent-soft:#E4F1F1;--success:#17864F;--success-soft:#E6F4EC;--warning:#B8720A;--warning-soft:#FBF0DD;--danger:#C22A2A;--danger-soft:#FBE9E9;--neutral-soft:#EEF2F3}
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--ink);font-family:'IBM Plex Sans',sans-serif;padding:24px}
+    .mono{font-family:'IBM Plex Mono',monospace}
+    .wrap{max-width:1280px;margin:0 auto}
+    .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+    .topbar h1{font-family:'Space Grotesk';font-size:20px;font-weight:700;margin:0;display:flex;align-items:center;gap:10px}
+    .dot-pulse{width:9px;height:9px;border-radius:50%;background:var(--success);box-shadow:0 0 0 0 rgba(23,134,79,.5);animation:pulse 2s infinite}
+    @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(23,134,79,.45)}70%{box-shadow:0 0 0 8px rgba(23,134,79,0)}100%{box-shadow:0 0 0 0 rgba(23,134,79,0)}}
+    .sim-clock-badge{background:var(--ink);color:#00FFCC;font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:700;padding:6px 14px;border-radius:20px;display:flex;align-items:center;gap:8px;box-shadow:0 2px 8px rgba(0,0,0,.12)}
+    .refresh-tag{font-size:12px;color:var(--subtle);display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);padding:6px 12px;border-radius:20px}
+    .refresh-tag.peak{color:var(--danger);border-color:#F1C8C8;background:var(--danger-soft)}
+    .refresh-tag.mid{color:var(--warning);border-color:#F1DDB0;background:var(--warning-soft)}
+    .refresh-tag.low{color:var(--success);border-color:#C7E6D5;background:var(--success-soft)}
+    .input-panel{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:18px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+    .input-panel h3{margin:0 0 8px;font-family:'Space Grotesk';font-size:14px;text-transform:uppercase;color:var(--accent)}
+    textarea{width:100%;height:80px;font-family:'IBM Plex Mono';font-size:11px;padding:8px;border:1px solid var(--border);border-radius:6px;background:#FAFBFB}
+    .btn{background:var(--accent);color:#fff;border:none;padding:8px 14px;border-radius:6px;font-weight:600;cursor:pointer;font-size:12px;margin-top:6px}
+    .btn:hover{opacity:.9}
+    .form-note{min-height:16px;margin-top:8px;color:var(--subtle);font-size:11px}
+    .form-note.ok{color:var(--success)}
+    .form-note.error{color:var(--danger)}
+    @media(max-width:1080px){.input-panel,.kpi-row,.panels{grid-template-columns:1fr}}
+    .kpi-row{display:grid;grid-template-columns:1fr 1fr 1fr 1.4fr;gap:14px;margin-bottom:14px}
+    .card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 18px}
+    .kpi-label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--subtle);font-weight:600;margin-bottom:8px}
+    .kpi-value{font-family:'Space Grotesk';font-size:32px;font-weight:700;line-height:1}
+    .kpi-sub{font-size:12px;color:var(--subtle);margin-top:6px}
+    .overload-card .kpi-top{display:flex;justify-content:space-between;align-items:flex-start}
+    .overload-pct{font-family:'Space Grotesk';font-size:32px;font-weight:700}
+    .overload-pct.ok{color:var(--success)}
+    .overload-pct.warn{color:var(--danger)}
+    .room-grid{display:grid;grid-template-columns:repeat(14,1fr);gap:3px;margin-top:10px}
+    .room-cell{aspect-ratio:1/1;border-radius:2px;background:var(--neutral-soft)}
+    .room-cell.busy{background:var(--success)}
+    .room-cell.over{background:var(--danger)}
+    .wait-strip{display:flex;align-items:center;gap:18px;margin-bottom:18px}
+    .wait-strip .card{flex:1;display:flex;align-items:center;justify-content:space-between}
+    .spark{display:flex;align-items:flex-end;gap:2px;height:32px}
+    .spark div{width:5px;background:var(--accent);border-radius:1px;opacity:.85}
+    .panels{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .panel-head{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid var(--border)}
+    .panel-head h2{font-family:'Space Grotesk';font-size:14px;font-weight:600;margin:0;text-transform:uppercase}
+    .list{max-height:480px;overflow-y:auto}
+    .row{border-bottom:1px solid var(--border)}
+    .row-head{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;cursor:pointer}
+    .row-head:hover{background:var(--neutral-soft)}
+    .row-id{font-family:'IBM Plex Mono';font-weight:600;font-size:13px}
+    .row-meta{font-size:12px;color:var(--subtle)}
+    .chip{font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px;white-space:nowrap}
+    .chip.done{background:var(--success-soft);color:var(--success)}
+    .chip.waiting{background:var(--warning-soft);color:var(--warning)}
+    .chip.progress{background:var(--accent-soft);color:var(--accent)}
+    .chip.checkin{background:#E2F0D9;color:#385723}
+    .chip.none{background:var(--neutral-soft);color:var(--subtle)}
+    .chip.over{background:var(--danger-soft);color:var(--danger)}
+    .row-detail{display:none;background:var(--neutral-soft);padding:14px 18px}
+    .row-detail.open{display:block}
+    .detail-line{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px dashed var(--border);font-size:13px}
+    .detail-stat-row{display:flex;gap:16px;margin-bottom:10px}
+    .detail-stat{font-size:12px;color:var(--subtle)}
+    .detail-stat b{display:block;font-family:'Space Grotesk';font-size:16px;color:var(--ink);font-weight:700}
+    .id-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+    .id-tag{font-family:'IBM Plex Mono';font-size:11px;font-weight:600;background:var(--surface);border:1px solid var(--border);padding:2px 6px;border-radius:4px}
+    .id-tag.prog{border-color:#BFDCDC;color:var(--accent);background:var(--accent-soft)}
+    .caret{transition:transform .15s ease;color:var(--subtle);font-size:11px}
+    .row-head.expanded .caret{transform:rotate(90deg)}
+    /* ── Room Config Panel ── */
+    .room-config-panel{background:var(--surface);border:1px solid var(--border);border-radius:10px;margin-bottom:18px;overflow:hidden}
+    .room-config-header{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;cursor:pointer;user-select:none;border-bottom:1px solid transparent}
+    .room-config-header.open{border-bottom-color:var(--border)}
+    .room-config-header h3{margin:0;font-family:'Space Grotesk';font-size:14px;text-transform:uppercase;color:var(--accent);font-weight:600}
+    .room-config-body{display:none;padding:16px 18px}
+    .room-config-body.open{display:block}
+    .room-config-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-bottom:14px}
+    .room-slot-item{display:flex;align-items:center;gap:10px;background:var(--neutral-soft);border-radius:8px;padding:8px 12px}
+    .room-slot-item label{flex:1;font-size:12px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .room-slot-item .room-slot-id{font-family:'IBM Plex Mono';font-size:11px;color:var(--subtle);min-width:36px}
+    .room-slot-input{width:52px;padding:4px 6px;border:1px solid var(--border);border-radius:5px;font-family:'IBM Plex Mono';font-size:13px;font-weight:600;text-align:center;background:var(--surface)}
+    .room-slot-input:focus{outline:none;border-color:var(--accent)}
+    .btn-save-slots{background:var(--accent);color:#fff;border:none;padding:8px 18px;border-radius:6px;font-weight:600;cursor:pointer;font-size:12px}
+    .btn-save-slots:hover{opacity:.9}
+    .room-config-note{font-size:11px;color:var(--subtle);font-family:'IBM Plex Mono';margin-left:12px}
+    .room-config-note.ok{color:var(--success)}
+    .room-config-note.error{color:var(--danger)}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+
+    <div class="topbar">
+      <h1><span class="dot-pulse"></span>Smart Hospital — Luồng Điều Phối Khám Bệnh</h1>
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:flex-end;">
+        <div class="sim-clock-badge"><span>🕒 Giờ Giả Lập:</span><span id="simClock">08:00:00 AM</span></div>
+        <span class="refresh-tag" id="loadBadge">— · —</span>
+        <div class="refresh-tag">Cập nhật <span class="mono" id="refreshSecs">0</span>s trước · tự động mỗi 5s</div>
+      </div>
+    </div>
+
+    <div class="input-panel">
+      <div>
+        <h3>1. Danh sách Input Bệnh Nhân & Chỉ định Phòng</h3>
+        <textarea id="jsonInput"></textarea>
+        <button class="btn" onclick="loadCustomInput()">Nạp Danh Sách Bệnh Nhân</button>
+        <div class="form-note mono" id="inputSaveState">Chưa lưu DB</div>
+      </div>
+      <div>
+        <h3>2. Bắn Sự kiện Điểm Chạm</h3>
+        <div style="display:flex;gap:8px;margin-bottom:8px;">
+          <select id="eventPatient" style="flex:1;padding:6px;font-size:12px;"></select>
+          <select id="eventRoom"    style="flex:1;padding:6px;font-size:12px;"></select>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <select id="eventStatus" style="flex:1;padding:6px;font-size:12px;">
+            <option value="checkin">1. Check-in phòng</option>
+            <option value="progress">2. Bắt đầu khám</option>
+            <option value="waiting">3. Chờ kết quả</option>
+            <option value="done">4. Hoàn thành</option>
+            <option value="none">5. Reset: Chưa khám</option>
+          </select>
+          <button class="btn" style="background:#0F2027;" onclick="triggerEvent()">Bắn</button>
+        </div>
+        <div class="form-note mono" id="eventSaveState">Sẵn sàng bắn event</div>
+      </div>
+      <div>
+        <h3>3. Mô phỏng 100 bệnh nhân</h3>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px;">
+          <button class="btn" onclick="startSimulation()">▶ Bắt đầu</button>
+          <button class="btn" style="background:var(--danger);"  onclick="stopSimulation()">⏹ Dừng</button>
+          <button class="btn" style="background:var(--warning);" onclick="resetDay()">↺ Reset ngày</button>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
+          <label for="simSpeedSelect" style="font-size:12px;font-weight:600;color:var(--subtle);">Tốc độ:</label>
+          <select id="simSpeedSelect" style="padding:4px 8px;font-size:12px;border-radius:6px;border:1px solid var(--border);font-family:'IBM Plex Mono';font-weight:600;background:var(--surface);">
+            <option value="60"  selected>⚡ 60x (8 phút)</option>
+            <option value="120">🚀 120x (4 phút)</option>
+            <option value="300">🔥 300x (1.6 phút)</option>
+            <option value="600">⚡⚡ 600x (48 giây)</option>
+            <option value="1">🐢 1x (Thực)</option>
+          </select>
+        </div>
+        <div class="form-note mono" id="simStatus">Sẵn sàng</div>
+        <div class="form-note mono" id="resetStatus">Chưa reset</div>
+      </div>
+    </div>
+
+    <!-- ── Panel cấu hình sức chứa phòng ── -->
+    <div class="room-config-panel">
+      <div class="room-config-header" id="roomConfigToggle" onclick="toggleRoomConfig()">
+        <h3>⚙️ Cấu hình Sức Chứa Phòng (Slots)</h3>
+        <span class="caret" id="roomConfigCaret">▶</span>
+      </div>
+      <div class="room-config-body" id="roomConfigBody">
+        <div class="room-config-grid" id="roomConfigGrid">
+          <!-- Render bởi JS -->
+        </div>
+        <div style="display:flex;align-items:center;">
+          <button class="btn-save-slots" onclick="saveAllSlots()">💾 Lưu tất cả</button>
+          <span class="room-config-note mono" id="roomConfigNote"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="kpi-row">
+      <div class="card">
+        <div class="kpi-label">Tổng bệnh nhân hiện tại</div>
+        <div class="kpi-value mono" id="kpiTotalPatients">0</div>
+        <div class="kpi-sub">mã theo dõi trong hệ thống</div>
+      </div>
+      <div class="card">
+        <div class="kpi-label">Bệnh nhân đang khám</div>
+        <div class="kpi-value mono" id="kpiPatients">0</div>
+        <div class="kpi-sub" id="kpiPatientsSub">0 chờ kết quả · 0 chưa khám</div>
+      </div>
+      <div class="card">
+        <div class="kpi-label">Phòng đang hoạt động</div>
+        <div class="kpi-value mono" id="kpiRooms">0 / 14</div>
+        <div class="kpi-sub">phòng có lịch khám</div>
+      </div>
+      <div class="card overload-card">
+        <div class="kpi-top">
+          <div>
+            <div class="kpi-label">Tỷ lệ quá tải</div>
+            <div class="overload-pct mono" id="kpiOverload">0%</div>
+          </div>
+          <div class="kpi-sub" id="kpiOverloadSub">0 phòng quá tải</div>
+        </div>
+        <div class="room-grid" id="roomGrid"></div>
+      </div>
+    </div>
+
+    <div class="wait-strip">
+      <div class="card">
+        <div>
+          <div class="kpi-label">Thời gian chờ trung bình</div>
+          <div class="kpi-value mono" id="kpiWait">— phút</div>
+        </div>
+        <div class="spark" id="waitSpark"></div>
+      </div>
+    </div>
+
+    <div class="panels">
+      <div class="card" style="padding:0;">
+        <div class="panel-head">
+          <h2>Bệnh nhân</h2>
+          <span class="count mono" id="patientCount">0 mã</span>
+        </div>
+        <div class="list" id="patientList"></div>
+      </div>
+      <div class="card" style="padding:0;">
+        <div class="panel-head">
+          <h2>Phòng khám</h2>
+          <span class="count mono" id="roomCount">14 phòng</span>
+        </div>
+        <div class="list" id="roomList"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Thứ tự load quan trọng: config/state trước, logic sau, main cuối cùng -->
+  <script src="/js/config.js"></script>
+  <script src="/js/state.js"></script>
+  <script src="/js/metrics.js"></script>
+  <script src="/js/render.js"></script>
+  <script src="/js/api.js"></script>
+  <script src="/js/websocket.js"></script>
+  <script src="/js/simulation.js"></script>
+  <script src="/js/main.js"></script>
+
+  <script>
+    // ── Room Config Panel ────────────────────────────────────────────
+    function toggleRoomConfig() {
+      const body  = document.getElementById('roomConfigBody');
+      const caret = document.getElementById('roomConfigCaret');
+      const header = document.getElementById('roomConfigToggle');
+      const isOpen = body.classList.toggle('open');
+      header.classList.toggle('open', isOpen);
+      caret.textContent = isOpen ? '▼' : '▶';
+      if (isOpen) renderRoomConfigGrid();
+    }
+
+    function renderRoomConfigGrid() {
+      const grid = document.getElementById('roomConfigGrid');
+      if (!grid) return;
+      // `rooms` được load từ server vào state.js / main.js
+      const list = (typeof rooms !== 'undefined' && rooms.length) ? rooms : ROOM_DATABASE;
+      grid.innerHTML = list.map(r => `
+        <div class="room-slot-item">
+          <span class="room-slot-id">${r.id}</span>
+          <label title="${r.name}">${r.name}</label>
+          <input
+            class="room-slot-input"
+            type="number"
+            min="1" max="20"
+            value="${r.slots}"
+            id="slot_${r.id}"
+            title="Sức chứa tối đa (slot) của ${r.name}"
+          />
+        </div>
+      `).join('');
+    }
+
+    async function saveAllSlots() {
+      const note = document.getElementById('roomConfigNote');
+      const list = (typeof rooms !== 'undefined' && rooms.length) ? rooms : ROOM_DATABASE;
+      note.textContent = 'Đang lưu...';
+      note.className = 'room-config-note mono';
+
+      const updates = list.map(r => {
+        const input = document.getElementById(`slot_${r.id}`);
+        return { id: r.id, slots: input ? Number(input.value) : r.slots };
+      });
+
+      const invalid = updates.find(u => isNaN(u.slots) || u.slots < 1 || u.slots > 20);
+      if (invalid) {
+        note.textContent = `Giá trị không hợp lệ cho ${invalid.id} (phải từ 1–20)`;
+        note.className = 'room-config-note mono error';
+        return;
+      }
+
+      try {
+        let changed = 0;
+        for (const u of updates) {
+          const orig = list.find(r => r.id === u.id);
+          if (orig && orig.slots !== u.slots) {
+            await updateRoomSlots(u.id, u.slots);
+            changed++;
+          }
+        }
+        // Reload rooms từ server để đồng bộ state
+        await loadRoomsFromServer();
+        if (changed > 0) {
+          note.textContent = `Đã cập nhật ${changed} phòng ✓`;
+          note.className = 'room-config-note mono ok';
+        } else {
+          note.textContent = 'Không có thay đổi nào';
+          note.className = 'room-config-note mono';
+        }
+      } catch (e) {
+        note.textContent = e.message || 'Lưu thất bại';
+        note.className = 'room-config-note mono error';
+      }
+    }
+  </script>
+</body>
+</html>

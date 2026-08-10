@@ -1,0 +1,374 @@
+{
+  "buildings": [
+    {
+      "id": 1,
+      "name": "Main Building",
+      "floors": [
+        {
+          "id": 1,
+          "building": 1,
+          "image": "Screenshot 2026-07-27 073956.png",
+          "nodes": [
+            {
+              "id": "n_04799eddd240",
+              "building": 1,
+              "floor": 1,
+              "x": 218.7,
+              "y": 46.9,
+              "label": "",
+              "type": "NORMAL",
+              "room_type": "",
+              "properties": {}
+            },
+            {
+              "id": "n_948142ccb730",
+              "building": 1,
+              "floor": 1,
+              "x": 221.4,
+              "y": 98.17,
+              "label": "",
+              "type": "NORMAL",
+              "room_type": "",
+              "properties": {}
+            },
+            {
+              "id": "n_d667dd693619",
+              "building": 1,
+              "floor": 1,
+              "x": 221.4,
+              "y": 160.24,
+              "label": "",
+              "type": "NORMAL",
+              "room_type": "",
+              "properties": {}
+            },
+            {
+              "id": "n_df54fd63b04e",
+              "building": 1,
+              "floor": 1,
+              "x": 218.7,
+              "y": 262.79,
+              "label": "",
+              "type": "NORMAL",
+              "room_type": "",
+              "properties": {}
+            },
+            {
+              "id": "n_9f967f46ca93",
+              "building": 1,
+              "floor": 1,
+              "x": 210.6,
+              "y": 355.89,
+              "label": "",
+              "type": "NORMAL",
+              "room_type": "",
+              "properties": {}
+            },
+            {
+              "id": "n_0958ed7574e6",
+              "building": 1,
+              "floor": 1,
+              "x": 220.05,
+              "y": 430.1,
+              "label": "",
+              "type": "NORMAL",
+              "room_type": "",
+              "properties": {}
+            }
+          ],
+          "edges": [
+            {
+              "id": "e_1a196ea6dbe2",
+              "from": "n_04799eddd240",
+              "to": "n_948142ccb730",
+              "fromBuilding": 1,
+              "fromFloor": 1,
+              "toBuilding": 1,
+              "toFloor": 1,
+              "distance": 51.341,
+              "weight": 1,
+              "edgeType": "NORMAL",
+              "bidirectional": true,
+              "crossFloor": false
+            },
+            {
+              "id": "e_edb1cc29d617",
+              "from": "n_948142ccb730",
+              "to": "n_d667dd693619",
+              "fromBuilding": 1,
+              "fromFloor": 1,
+              "toBuilding": 1,
+              "toFloor": 1,
+              "distance": 62.07,
+              "weight": 1,
+              "edgeType": "NORMAL",
+              "bidirectional": true,
+              "crossFloor": false
+            },
+            {
+              "id": "e_75efbf0047d9",
+              "from": "n_d667dd693619",
+              "to": "n_df54fd63b04e",
+              "fromBuilding": 1,
+              "fromFloor": 1,
+              "toBuilding": 1,
+              "toFloor": 1,
+              "distance": 102.586,
+              "weight": 1,
+              "edgeType": "NORMAL",
+              "bidirectional": true,
+              "crossFloor": false
+            },
+            {
+              "id": "e_b2b5eac127d1",
+              "from": "n_df54fd63b04e",
+              "to": "n_9f967f46ca93",
+              "fromBuilding": 1,
+              "fromFloor": 1,
+              "toBuilding": 1,
+              "toFloor": 1,
+              "distance": 93.452,
+              "weight": 1,
+              "edgeType": "NORMAL",
+              "bidirectional": true,
+              "crossFloor": false
+            },
+            {
+              "id": "e_1a5c110f5b25",
+              "from": "n_9f967f46ca93",
+              "to": "n_0958ed7574e6",
+              "fromBuilding": 1,
+              "fromFloor": 1,
+              "toBuilding": 1,
+              "toFloor": 1,
+              "distance": 74.809,
+              "weight": 1,
+              "edgeType": "NORMAL",
+              "bidirectional": true,
+              "crossFloor": false
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "floors": [
+    {
+      "id": 1,
+      "building": 1,
+      "image": "Screenshot 2026-07-27 073956.png",
+      "nodes": [
+        {
+          "id": "n_04799eddd240",
+          "building": 1,
+          "floor": 1,
+          "x": 218.7,
+          "y": 46.9,
+          "label": "",
+          "type": "NORMAL",
+          "room_type": "",
+          "properties": {}
+        },
+        {
+          "id": "n_948142ccb730",
+          "building": 1,
+          "floor": 1,
+          "x": 221.4,
+          "y": 98.17,
+          "label": "",
+          "type": "NORMAL",
+          "room_type": "",
+          "properties": {}
+        },
+        {
+          "id": "n_d667dd693619",
+          "building": 1,
+          "floor": 1,
+          "x": 221.4,
+          "y": 160.24,
+          "label": "",
+          "type": "NORMAL",
+          "room_type": "",
+          "properties": {}
+        },
+        {
+          "id": "n_df54fd63b04e",
+          "building": 1,
+          "floor": 1,
+          "x": 218.7,
+          "y": 262.79,
+          "label": "",
+          "type": "NORMAL",
+          "room_type": "",
+          "properties": {}
+        },
+        {
+          "id": "n_9f967f46ca93",
+          "building": 1,
+          "floor": 1,
+          "x": 210.6,
+          "y": 355.89,
+          "label": "",
+          "type": "NORMAL",
+          "room_type": "",
+          "properties": {}
+        },
+        {
+          "id": "n_0958ed7574e6",
+          "building": 1,
+          "floor": 1,
+          "x": 220.05,
+          "y": 430.1,
+          "label": "",
+          "type": "NORMAL",
+          "room_type": "",
+          "properties": {}
+        }
+      ],
+      "edges": [
+        {
+          "id": "e_1a196ea6dbe2",
+          "from": "n_04799eddd240",
+          "to": "n_948142ccb730",
+          "fromBuilding": 1,
+          "fromFloor": 1,
+          "toBuilding": 1,
+          "toFloor": 1,
+          "distance": 51.341,
+          "weight": 1,
+          "edgeType": "NORMAL",
+          "bidirectional": true,
+          "crossFloor": false
+        },
+        {
+          "id": "e_edb1cc29d617",
+          "from": "n_948142ccb730",
+          "to": "n_d667dd693619",
+          "fromBuilding": 1,
+          "fromFloor": 1,
+          "toBuilding": 1,
+          "toFloor": 1,
+          "distance": 62.07,
+          "weight": 1,
+          "edgeType": "NORMAL",
+          "bidirectional": true,
+          "crossFloor": false
+        },
+        {
+          "id": "e_75efbf0047d9",
+          "from": "n_d667dd693619",
+          "to": "n_df54fd63b04e",
+          "fromBuilding": 1,
+          "fromFloor": 1,
+          "toBuilding": 1,
+          "toFloor": 1,
+          "distance": 102.586,
+          "weight": 1,
+          "edgeType": "NORMAL",
+          "bidirectional": true,
+          "crossFloor": false
+        },
+        {
+          "id": "e_b2b5eac127d1",
+          "from": "n_df54fd63b04e",
+          "to": "n_9f967f46ca93",
+          "fromBuilding": 1,
+          "fromFloor": 1,
+          "toBuilding": 1,
+          "toFloor": 1,
+          "distance": 93.452,
+          "weight": 1,
+          "edgeType": "NORMAL",
+          "bidirectional": true,
+          "crossFloor": false
+        },
+        {
+          "id": "e_1a5c110f5b25",
+          "from": "n_9f967f46ca93",
+          "to": "n_0958ed7574e6",
+          "fromBuilding": 1,
+          "fromFloor": 1,
+          "toBuilding": 1,
+          "toFloor": 1,
+          "distance": 74.809,
+          "weight": 1,
+          "edgeType": "NORMAL",
+          "bidirectional": true,
+          "crossFloor": false
+        }
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "id": "e_1a196ea6dbe2",
+      "from": "n_04799eddd240",
+      "to": "n_948142ccb730",
+      "fromBuilding": 1,
+      "fromFloor": 1,
+      "toBuilding": 1,
+      "toFloor": 1,
+      "distance": 51.341,
+      "weight": 1,
+      "edgeType": "NORMAL",
+      "bidirectional": true,
+      "crossFloor": false
+    },
+    {
+      "id": "e_edb1cc29d617",
+      "from": "n_948142ccb730",
+      "to": "n_d667dd693619",
+      "fromBuilding": 1,
+      "fromFloor": 1,
+      "toBuilding": 1,
+      "toFloor": 1,
+      "distance": 62.07,
+      "weight": 1,
+      "edgeType": "NORMAL",
+      "bidirectional": true,
+      "crossFloor": false
+    },
+    {
+      "id": "e_75efbf0047d9",
+      "from": "n_d667dd693619",
+      "to": "n_df54fd63b04e",
+      "fromBuilding": 1,
+      "fromFloor": 1,
+      "toBuilding": 1,
+      "toFloor": 1,
+      "distance": 102.586,
+      "weight": 1,
+      "edgeType": "NORMAL",
+      "bidirectional": true,
+      "crossFloor": false
+    },
+    {
+      "id": "e_b2b5eac127d1",
+      "from": "n_df54fd63b04e",
+      "to": "n_9f967f46ca93",
+      "fromBuilding": 1,
+      "fromFloor": 1,
+      "toBuilding": 1,
+      "toFloor": 1,
+      "distance": 93.452,
+      "weight": 1,
+      "edgeType": "NORMAL",
+      "bidirectional": true,
+      "crossFloor": false
+    },
+    {
+      "id": "e_1a5c110f5b25",
+      "from": "n_9f967f46ca93",
+      "to": "n_0958ed7574e6",
+      "fromBuilding": 1,
+      "fromFloor": 1,
+      "toBuilding": 1,
+      "toFloor": 1,
+      "distance": 74.809,
+      "weight": 1,
+      "edgeType": "NORMAL",
+      "bidirectional": true,
+      "crossFloor": false
+    }
+  ]
+}
