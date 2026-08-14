@@ -55,9 +55,43 @@
   body { @apply font-sans antialiased bg-background text-foreground; }
 }
 
-@keyframes dashAnim {
-  to { stroke-dashoffset: -20; }
+/* ── Route flow animation ── */
+@keyframes flowDash {
+  from { stroke-dashoffset: 40; }
+  to   { stroke-dashoffset: 0; }
 }
+
+@keyframes flowShine {
+  0%   { stroke-dashoffset: 0;   opacity: 0; }
+  20%  { opacity: 0.85; }
+  80%  { opacity: 0.85; }
+  100% { stroke-dashoffset: -320; opacity: 0; }
+}
+
+@keyframes glowPulse {
+  0%, 100% { opacity: 0.15; }
+  50%       { opacity: 0.35; }
+}
+
+/* Đường chính — nét đứt chảy liên tục */
+.path-flow {
+  stroke-dasharray: 16 8;
+  animation: flowDash 0.55s linear infinite;
+}
+
+/* Lớp "sóng" sáng chạy trên đường */
+.path-shine {
+  stroke-dasharray: 60 9999;
+  animation: flowShine 1.8s ease-in-out infinite;
+}
+
+/* Lớp glow nhấp nháy nhẹ */
+.path-glow {
+  animation: glowPulse 2s ease-in-out infinite;
+}
+
+/* Legacy — giữ để không break nếu còn dùng */
 .path-pulse {
-  animation: dashAnim 1s linear infinite;
+  stroke-dasharray: 16 8;
+  animation: flowDash 0.55s linear infinite;
 }

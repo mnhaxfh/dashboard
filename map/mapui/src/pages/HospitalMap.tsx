@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import floorplanImg from "@assets/t1_1785397917353.png";
+import floorplanImg from "@assets/image.png";
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -83,55 +83,55 @@ const INITIAL_NODES: Record<string, {x: number, y: number}> = {
 };
 
 const EDGES: [string, string][] = [
-  ["A1","A36"],["A36","A35"],["A35","A2"],["A1","A2"],
-  ["A2","A3"],["A3","A4"],["A4","A5"],
-  ["A3","A34"],["A34","A33"],["A33","A32"],["A32","A31"],
+  ["A36","A35"],["A35","A2"],["A1","A5"],
+  ["A2","A3"],["A3","A4"],["A6","A33"],
+  ["A3","A34"],["A4","A6"],["A33","A5"],["A32","A31"],
   ["A31","A30"],["A30","A29"],["A29","A28"],["A28","A27"],
   ["A27","A26"],["A26","A25"],["A25","A24"],["A24","A23"],
   ["A23","A22"],["A22","A21"],
-  ["A5","A6"],["A6","A7"],["A7","A8"],["A8","A9"],
-  ["A9","A10"],["A10","A11"],["A11","A12"],["A12","A13"],["A13","A14"],
+  ["A6","A7"],["A7","A8"],["A8","A9"],
+  ["A9","A10"],["A10","A11"],["A11","A12"],["A12","A13"],["A13","A15"],
   ["A14","A15"],["A15","A16"],["A16","A17"],["A18","A19"],
   ["A19","A25"],["A18","A16"],
-  ["A17","A20"],["A21","A20"],
+  ["A17","A20"],["A21","A20"],["A32","A34"],
 ];
 
 // Maps P101–P114 (and utility rooms) to their nearest corridor nodes
 const ROOM_NODES: Record<string, string[]> = {
-  "P101":                         ["A7", "A8"],   // Khám nam khoa (trung tâm)
+  "P101":                         ["A8"],   // Khám nam khoa (trung tâm)
   "P102":                         ["A10"],         // XN tinh dịch đồ
   "P103":                         ["A32"],         // Siêu âm đầu dò (trái)
   "P104":                         ["A30"],         // Khám hiếm muộn nữ (trái)
   "P105":                         ["A12"],         // Nội tiết sinh sản
   "P106":                         ["A28"],         // Siêu âm nang noãn (trái)
-  "P107":                         ["A5", "A6"],   // OPU (phải trên)
+  "P107":                         ["A5"],   // OPU (phải trên)
   "P108":                         ["A7"],          // ET (phải giữa)
   "P109":                         ["A9"],          // Trữ đông phôi (phải)
   "P110":                         ["A2"],          // IUI (trái trên)
   "P111":                         ["A36"],         // Vi phẫu nam khoa (trái trên cùng)
   "P112":                         ["A34"],         // Tư vấn di truyền (trái)
-  "P113":                         ["A5"],          // XN nội tiết (phải trên cùng)
+  "P113":                         ["A1"],          // XN nội tiết (phải trên cùng)
   "P114":                         ["A26"],         // Khám tổng quát (trái)
-  "Quầy thu ngân":                ["A34","A4","A5","A6"],
+  "Quầy thu ngân":                ["A4"],
   "Sảnh chờ-1":                   ["A4"],
-  "Khu vực ghế ngồi (trái)":      ["A35"],
-  "Khu vực ghế ngồi (phải)":      ["A5"],
+  "Khu vực ghế ngồi (trái)":      [],
+  "Khu vực ghế ngồi (phải)":      [],
   "Nhà thuốc":                    ["A22"],
-  "Quầy lễ tân":                  ["A20"],
-  "Khu vực kỹ thuật-1":           ["A20"],
+  "Quầy lễ tân":                  ["A17"],
+  "Khu vực kỹ thuật-1":           [],
   "Thang máy-1":                  ["A13"],
   "Thang máy-2":                  ["A18"],
-  "Thang máy-3":                  ["A27"],
+  "Thang máy-3":                  ["A19"],
   "Cầu thang bộ-1":               ["A24"],
-  "Cầu thang bộ-2":               ["A14","A17"],
+  "Cầu thang bộ-2":               ["A14"],
   "Khu vệ sinh-1":                ["A31"],
   "Nhà vệ sinh-2":                ["A11"],
   "Lối thoát hiểm-1":             ["A29"],
   "Lối thoát hiểm-2":             ["A11"],
   "Khoa dược":                    [],
-  "Quầy thông tin":               ["A13"],
-  "Khu vực ghế ngồi (dưới)":      ["A19","A23"],
-  "Sảnh chính-2":                 ["A20","A21"],
+  "Quầy thông tin":               [],
+  "Khu vực ghế ngồi (dưới)":      [],
+  "Sảnh chính-2":                 ["A20"],
 };
 
 // ── Dijkstra single-pair ───────────────────────────────────────────────
@@ -140,57 +140,227 @@ function dijkstra(
   rooms: RoomDef[],
   nodes: typeof INITIAL_NODES
 ): { path: string[]; distance: number; error: string | null } {
-  if (!startId || !endId || startId === endId) return { path: [], distance: 0, error: null };
+  if (!startId || !endId || startId === endId) {
+    return { path: [], distance: 0, error: null };
+  }
 
   const graph: Record<string, Record<string, number>> = {};
   const addEdge = (u: string, v: string, w: number) => {
     if (!graph[u]) graph[u] = {};
     if (!graph[v]) graph[v] = {};
-    graph[u][v] = w; graph[v][u] = w;
+    graph[u][v] = w;
+    graph[v][u] = w;
   };
 
   EDGES.forEach(([u, v]) => {
-    if (nodes[u] && nodes[v])
+    if (nodes[u] && nodes[v]) {
       addEdge(u, v, Math.hypot(nodes[u].x - nodes[v].x, nodes[u].y - nodes[v].y));
+    }
   });
 
   Object.entries(ROOM_NODES).forEach(([roomId, nodeIds]) => {
     const room = rooms.find((r: RoomDef) => r.id === roomId);
     if (!room) return;
+
     const cx = room.bbox[0] + room.bbox[2] / 2;
     const cy = room.bbox[1] + room.bbox[3] / 2;
+
     nodeIds.forEach(nodeId => {
-      if (nodes[nodeId])
+      if (nodes[nodeId]) {
         addEdge(roomId, nodeId, Math.hypot(cx - nodes[nodeId].x, cy - nodes[nodeId].y) * 0.5);
+      }
     });
   });
 
-  if (!graph[startId] || !graph[endId])
+  if (!graph[startId] || !graph[endId]) {
     return { path: [], distance: 0, error: "Phòng này chưa có kết nối trên bản đồ." };
+  }
 
   const dist: Record<string, number> = {};
   const prev: Record<string, string | null> = {};
   const unvisited = new Set<string>(Object.keys(graph));
-  for (const n of unvisited) { dist[n] = Infinity; prev[n] = null; }
+
+  for (const n of unvisited) {
+    dist[n] = Infinity;
+    prev[n] = null;
+  }
+
   dist[startId] = 0;
 
   while (unvisited.size > 0) {
-    let curr: string | null = null, minD = Infinity;
-    for (const n of unvisited) if (dist[n] < minD) { minD = dist[n]; curr = n; }
+    let curr: string | null = null;
+    let minD = Infinity;
+
+    for (const n of unvisited) {
+      if (dist[n] < minD) {
+        minD = dist[n];
+        curr = n;
+      }
+    }
+
     if (curr === null || curr === endId) break;
+
     unvisited.delete(curr);
+
     for (const nb in graph[curr]) {
       const alt = dist[curr] + graph[curr][nb];
-      if (alt < dist[nb]) { dist[nb] = alt; prev[nb] = curr; }
+      if (alt < dist[nb]) {
+        dist[nb] = alt;
+        prev[nb] = curr;
+      }
     }
   }
 
-  if (dist[endId] === Infinity) return { path: [], distance: 0, error: "Không tìm thấy đường đi." };
+  if (dist[endId] === Infinity) {
+    return { path: [], distance: 0, error: "Không tìm thấy đường đi." };
+  }
 
   const path: string[] = [];
   let cur: string | null = endId;
-  while (cur !== null) { path.unshift(cur); cur = prev[cur]; }
+
+  while (cur !== null) {
+    path.unshift(cur);
+    cur = prev[cur];
+  }
+
   return { path, distance: dist[endId], error: null };
+}
+
+// ── Orthogonal route helpers ──────────────────────────────────────────
+// Mọi đường hiển thị trên bản đồ chỉ đi ngang/dọc 90°, không có đường chéo.
+type Point = { x: number; y: number };
+
+function samePoint(a: Point, b: Point) {
+  return Math.abs(a.x - b.x) < 0.5 && Math.abs(a.y - b.y) < 0.5;
+}
+
+function pushPoint(points: Point[], point: Point) {
+  if (!points.length || !samePoint(points[points.length - 1], point)) {
+    points.push(point);
+  }
+}
+
+// Nối 2 điểm bằng các đoạn ngang/dọc.
+// Nếu hai điểm đã cùng hàng/cột thì dùng một đoạn thẳng.
+function orthogonalConnector(from: Point, to: Point): Point[] {
+  const points: Point[] = [];
+  pushPoint(points, from);
+
+  if (samePoint(from, to)) return points;
+
+  if (Math.abs(from.x - to.x) < 0.5) {
+    pushPoint(points, to);
+    return points;
+  }
+
+  if (Math.abs(from.y - to.y) < 0.5) {
+    pushPoint(points, to);
+    return points;
+  }
+
+  const dx = Math.abs(to.x - from.x);
+  const dy = Math.abs(to.y - from.y);
+
+  if (dx >= dy) {
+    const midX = Math.round((from.x + to.x) / 2);
+    pushPoint(points, { x: midX, y: from.y });
+    pushPoint(points, { x: midX, y: to.y });
+  } else {
+    const midY = Math.round((from.y + to.y) / 2);
+    pushPoint(points, { x: from.x, y: midY });
+    pushPoint(points, { x: to.x, y: midY });
+  }
+
+  pushPoint(points, to);
+  return points;
+}
+
+function pointsToSvgPath(points: Point[]) {
+  if (!points.length) return "";
+
+  return points
+    .map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`)
+    .join(" ");
+}
+
+// Điểm cửa nằm trên cạnh phòng gần node hành lang nhất.
+// Nhờ đó đường không còn đi từ tâm phòng ra node.
+function getRoomDoorPoint(room: RoomDef, node: Point): Point {
+  const [x, y, w, h] = room.bbox;
+
+  const candidates: Point[] = [
+    { x: Math.max(x, Math.min(x + w, node.x)), y },
+    { x: Math.max(x, Math.min(x + w, node.x)), y: y + h },
+    { x, y: Math.max(y, Math.min(y + h, node.y)) },
+    { x: x + w, y: Math.max(y, Math.min(y + h, node.y)) },
+  ];
+
+  return candidates.reduce((best, candidate) => {
+    const bestD = Math.hypot(best.x - node.x, best.y - node.y);
+    const currentD = Math.hypot(candidate.x - node.x, candidate.y - node.y);
+    return currentD < bestD ? candidate : best;
+  });
+}
+
+// Chuyển path Dijkstra thành một đường SVG vuông góc liên tục.
+function buildOrthogonalRoutePoints(
+  path: string[],
+  rooms: RoomDef[],
+  nodes: typeof INITIAL_NODES
+): Point[] {
+  if (path.length < 2) return [];
+
+  const points: Point[] = [];
+
+  for (let i = 0; i < path.length - 1; i++) {
+    const fromId = path[i];
+    const toId = path[i + 1];
+
+    const fromNode = nodes[fromId];
+    const toNode = nodes[toId];
+
+    const fromRoom = rooms.find(r => r.id === fromId);
+    const toRoom = rooms.find(r => r.id === toId);
+
+    let from: Point | null = fromNode || null;
+    let to: Point | null = toNode || null;
+
+    if (fromRoom && toNode) {
+      from = getRoomDoorPoint(fromRoom, toNode);
+    }
+
+    if (toRoom && fromNode) {
+      to = getRoomDoorPoint(toRoom, fromNode);
+    }
+
+    if (!from && fromRoom) {
+      from = {
+        x: fromRoom.bbox[0] + fromRoom.bbox[2] / 2,
+        y: fromRoom.bbox[1] + fromRoom.bbox[3] / 2,
+      };
+    }
+
+    if (!to && toRoom) {
+      to = {
+        x: toRoom.bbox[0] + toRoom.bbox[2] / 2,
+        y: toRoom.bbox[1] + toRoom.bbox[3] / 2,
+      };
+    }
+
+    if (!from || !to) continue;
+
+    orthogonalConnector(from, to).forEach(p => pushPoint(points, p));
+  }
+
+  return points;
+}
+
+function getRoutePathD(
+  path: string[],
+  rooms: RoomDef[],
+  nodes: typeof INITIAL_NODES
+) {
+  return pointsToSvgPath(buildOrthogonalRoutePoints(path, rooms, nodes));
 }
 
 // ── Multi-stop route: chain P1→P2→P3→... ─────────────────────────────
@@ -508,44 +678,69 @@ export default function HospitalMap() {
     setTransform({ x: 0, y: 0, scale: 1 });
   };
 
-  // ── Compute highlighted sets ─────────────────────────────────────
+  // ── Compute highlighted route ───────────────────────────────────────
   const activeSegments = patientRouteResult?.segments ?? [];
+
+  const activeRoutePaths = useMemo(() => {
+    if (tab === 'patient') {
+      return activeSegments
+        .filter(seg => seg.path.length > 1)
+        .map((seg, idx) => ({
+          ...seg,
+          index: idx,
+          d: getRoutePathD(seg.path, rooms, nodes),
+        }))
+        .filter(seg => Boolean(seg.d));
+    }
+
+    if (tab === 'route' && manualPath?.path?.length > 1) {
+      return [{
+        from: manualPath.path[0],
+        to: manualPath.path[manualPath.path.length - 1],
+        path: manualPath.path,
+        index: 0,
+        d: getRoutePathD(manualPath.path, rooms, nodes),
+      }];
+    }
+
+    return [];
+  }, [tab, activeSegments, manualPath, rooms, nodes]);
+
   const allHighlightedNodes = useMemo(() => {
-    if (tab === 'patient' && activeSegments.length > 0) return flattenSegments(activeSegments);
-    if (tab === 'route' && manualPath?.path) return new Set(manualPath.path);
+    if (tab === 'patient' && activeSegments.length > 0) {
+      return flattenSegments(activeSegments);
+    }
+
+    if (tab === 'route' && manualPath?.path) {
+      return new Set(manualPath.path);
+    }
+
     return new Set<string>();
   }, [tab, activeSegments, manualPath]);
 
-  const allHighlightedEdges = useMemo(() => {
-    if (tab === 'patient' && activeSegments.length > 0) return getAllPathEdgePairs(activeSegments);
-    if (tab === 'route' && manualPath?.path) return getPathEdgePairs(manualPath.path);
-    return new Set<string>();
-  }, [tab, activeSegments, manualPath]);
+  const hasRoute = activeRoutePaths.length > 0;
 
-  const hasRoute = allHighlightedNodes.size > 0;
+  const s1Highlighted =
+    hasRoute &&
+    allHighlightedNodes.has("Sảnh chờ-1") &&
+    allHighlightedNodes.has("A4");
 
-  // Sảnh chờ-1 special stub
-  const s1Highlighted = hasRoute && allHighlightedNodes.has("Sảnh chờ-1") && allHighlightedNodes.has("A4");
+  const segmentColors = [
+    "#06b6d4", // cyan-500
+    "#3b82f6", // blue-500
+    "#8b5cf6", // violet-500
+    "#10b981", // emerald-500
+    "#f59e0b", // amber-500
+    "#ec4899", // pink-500
+  ];
 
-  // Segment color by index
-  const segmentColors = ["#facc15","#fb923c","#34d399","#60a5fa","#f472b6","#a78bfa"];
   const nodeSegmentColor = useMemo(() => {
     const m: Record<string, string> = {};
     activeSegments.forEach((seg, idx) => {
       const color = segmentColors[idx % segmentColors.length];
-      seg.path.forEach(n => { if (!m[n]) m[n] = color; });
-    });
-    return m;
-  }, [activeSegments]);
-
-  const edgeSegmentColor = useMemo(() => {
-    const m: Record<string, string> = {};
-    activeSegments.forEach((seg, idx) => {
-      const color = segmentColors[idx % segmentColors.length];
-      for (let i = 0; i < seg.path.length - 1; i++) {
-        const key = `${seg.path[i]}|${seg.path[i+1]}`;
-        if (!m[key]) m[key] = color;
-      }
+      seg.path.forEach(n => {
+        if (!m[n]) m[n] = color;
+      });
     });
     return m;
   }, [activeSegments]);
@@ -566,53 +761,141 @@ export default function HospitalMap() {
           <svg ref={svgRef} viewBox="0 0 1000 870" width="1000" height="870" className="max-w-none block">
             <image href={floorplanImg} width="1000" height="870" opacity={floorOpacity} className="pointer-events-none" />
 
-            {/* Corridor edges */}
-            <g>
+            {/* Corridor network — tất cả đều là đường 90° */}
+            <g pointerEvents="none">
               {EDGES.map(([u, v]) => {
-                const keyFwd = `${u}|${v}`, keyBwd = `${v}|${u}`;
-                const isPath = allHighlightedEdges.has(keyFwd) || allHighlightedEdges.has(keyBwd);
-                const color = tab === 'patient'
-                  ? (edgeSegmentColor[keyFwd] || edgeSegmentColor[keyBwd] || "#facc15")
-                  : "#facc15";
-                if (hasRoute && !isPath) return null;
+                const from = nodes[u];
+                const to = nodes[v];
+                if (!from || !to) return null;
+
+                const d = pointsToSvgPath(orthogonalConnector(from, to));
+
                 return (
-                  <line key={`${u}-${v}`}
-                    x1={nodes[u]?.x} y1={nodes[u]?.y} x2={nodes[v]?.x} y2={nodes[v]?.y}
-                    stroke={isPath ? color : "#22c55e"} strokeWidth={isPath ? 5 : 4}
-                    strokeDasharray={isPath ? "10" : "none"}
-                    className={cn(isPath ? "path-pulse" : "opacity-30")} strokeLinecap="round" />
+                  <path
+                    key={`corridor-${u}-${v}`}
+                    d={d}
+                    fill="none"
+                    stroke="#22c55e"
+                    strokeWidth={4}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    opacity={hasRoute ? 0.12 : 0.30}
+                  />
                 );
               })}
             </g>
 
-            {/* Sảnh chờ-1 stub */}
-            {(!hasRoute || s1Highlighted) && (
-              <line x1={nodes.A4?.x} y1={70} x2={nodes.A4?.x} y2={nodes.A4?.y}
-                stroke={s1Highlighted ? "#facc15" : "#22c55e"} strokeWidth={s1Highlighted ? 5 : 4}
-                strokeDasharray={s1Highlighted ? "10" : "none"}
-                className={cn(s1Highlighted ? "path-pulse" : "opacity-30")} strokeLinecap="round" />
+            {/* ĐƯỜNG A → B — một tuyến liên tục */}
+            {hasRoute && (
+              <g pointerEvents="none">
+                {activeRoutePaths.map((route, idx) => {
+                  const color =
+                    tab === 'patient'
+                      ? segmentColors[route.index % segmentColors.length]
+                      : "#06b6d4"; // cyan-500 — xanh biển sáng đẹp với animation
+
+                  return (
+                    <g key={`route-${route.from}-${route.to}-${idx}`}>
+                      {/* Layer 1: Glow ngoài — nhấp nháy nhẹ */}
+                      <path
+                        d={route.d}
+                        fill="none"
+                        stroke={color}
+                        strokeWidth={18}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="path-glow"
+                      />
+
+                      {/* Layer 2: Nền đường liền (tối hơn màu chính) */}
+                      <path
+                        d={route.d}
+                        fill="none"
+                        stroke={color}
+                        strokeWidth={7}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        opacity={0.55}
+                      />
+
+                      {/* Layer 3: Nét đứt chảy — hiệu ứng dòng chảy chính */}
+                      <path
+                        d={route.d}
+                        fill="none"
+                        stroke={color}
+                        strokeWidth={7}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="path-flow"
+                      />
+
+                      {/* Layer 4: Shine — tia sáng chạy dọc tuyến đường */}
+                      <path
+                        d={route.d}
+                        fill="none"
+                        stroke="white"
+                        strokeWidth={3.5}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="path-shine"
+                      />
+                    </g>
+                  );
+                })}
+              </g>
             )}
 
-            {/* Room-to-node connections */}
-            <g>
+            {/* Sảnh chờ-1 stub */}
+            {(!hasRoute || s1Highlighted) && (
+              <path
+                d={`M ${nodes.A4?.x ?? 0} 70 V ${nodes.A4?.y ?? 0}`}
+                fill="none"
+                stroke="#22c55e"
+                strokeWidth={4}
+                strokeLinecap="round"
+                opacity={s1Highlighted ? 0.5 : 0.3}
+              />
+            )}
+
+            {/* Phòng → cửa → hành lang.
+                Không nối từ tâm phòng nữa. */}
+            <g pointerEvents="none">
               {Object.entries(ROOM_NODES).flatMap(([roomId, nodeIds]) =>
                 nodeIds.map(nodeId => {
                   if (roomId === "Sảnh chờ-1" && nodeId === "A4") return null;
+
                   const room = rooms.find((r: RoomDef) => r.id === roomId);
-                  if (!room || !nodes[nodeId]) return null;
-                  const cx = room.bbox[0]+room.bbox[2]/2, cy = room.bbox[1]+room.bbox[3]/2;
-                  const keyFwd = `${roomId}|${nodeId}`, keyBwd = `${nodeId}|${roomId}`;
-                  const isPath = allHighlightedEdges.has(keyFwd) || allHighlightedEdges.has(keyBwd);
-                  const color = tab === 'patient'
-                    ? (edgeSegmentColor[keyFwd] || edgeSegmentColor[keyBwd] || "#facc15")
-                    : "#facc15";
-                  if (hasRoute && !isPath) return null;
+                  const node = nodes[nodeId];
+
+                  if (!room || !node) return null;
+
+                  const door = getRoomDoorPoint(room, node);
+                  const d = pointsToSvgPath(orthogonalConnector(door, node));
+
+                  const isStart =
+                    tab === 'route' &&
+                    rooms.find((r: RoomDef) => r.name === startRoom)?.id === roomId;
+
+                  const isEnd =
+                    tab === 'route' &&
+                    rooms.find((r: RoomDef) => r.name === endRoom)?.id === roomId;
+
+                  const isActiveRoom =
+                    allHighlightedNodes.has(roomId) &&
+                    allHighlightedNodes.has(nodeId);
+
                   return (
-                    <line key={`${roomId}-${nodeId}`}
-                      x1={cx} y1={cy} x2={nodes[nodeId].x} y2={nodes[nodeId].y}
-                      stroke={isPath ? color : "#22c55e"} strokeWidth={isPath ? 5 : 2}
-                      strokeDasharray={isPath ? "10" : "none"}
-                      className={cn(isPath ? "path-pulse" : "opacity-20")} strokeLinecap="round" />
+                    <g key={`door-${roomId}-${nodeId}`}>
+                      <path
+                        d={d}
+                        fill="none"
+                        stroke={isActiveRoom ? "#06b6d4" : "#22c55e"}
+                        strokeWidth={isActiveRoom ? 4 : 2}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        opacity={isActiveRoom ? 0.7 : 0.10}
+                      />
+                    </g>
                   );
                 })
               )}
@@ -626,25 +909,53 @@ export default function HospitalMap() {
                 const isInPath = allHighlightedNodes.has(id);
                 const isStop   = tab === 'patient' && selectedPatient?.requiredRooms.includes(id);
                 const segColor = nodeSegmentColor[id];
+
+                // Style phòng start/end — nổi bật cyan
+                const roomStyle: React.CSSProperties =
+                  isStart || isEnd
+                    ? { fill: '#06b6d4' + '33', stroke: '#06b6d4', strokeWidth: 2.5 }
+                    : isInPath && segColor
+                    ? { fill: segColor + '22', stroke: segColor + '66' }
+                    : {};
+
                 return (
                   <g key={id} style={editMode ? { cursor:'move' } : {}}>
+                    {/* Pulse ring cho start/end khi tìm được đường */}
+                    {(isStart || isEnd) && hasRoute && (
+                      <rect
+                        x={x - 4} y={y - 4} width={w + 8} height={h + 8} rx={10}
+                        fill="none"
+                        stroke="#06b6d4"
+                        strokeWidth={2}
+                        opacity={0.5}
+                        className="animate-pulse"
+                      />
+                    )}
                     <rect x={x} y={y} width={w} height={h} rx={6}
-                      className={cn("stroke-border transition-colors duration-300",
-                        isStart ? "fill-primary/20 stroke-primary/50" :
-                        isEnd   ? "fill-destructive/20 stroke-destructive/50" :
-                        isStop && isInPath ? "fill-yellow-500/10 stroke-yellow-500/60" :
-                        isStop  ? "fill-blue-500/10 stroke-blue-400/40" :
-                        "fill-card/90 hover:fill-accent"
+                      className={cn("transition-colors duration-300",
+                        !(isStart || isEnd) && !isInPath && (
+                          isStop ? "fill-blue-500/10 stroke-blue-400/40 stroke-border" : "fill-card/90 hover:fill-accent stroke-border"
+                        )
                       )}
-                      style={isInPath && segColor ? { fill: segColor + '22', stroke: segColor + '99' } : {}}
+                      style={roomStyle}
                       onPointerDown={editMode ? e => handleRoomPointerDown(e, id) : undefined}
                     />
                     <text x={x+w/2} y={y+h/2} textAnchor="middle" dominantBaseline="middle"
-                      className={cn("text-[10px] pointer-events-none",
-                        (isStart||isEnd) ? "fill-foreground font-bold" : "fill-foreground/80 font-medium"
+                      className={cn("pointer-events-none",
+                        (isStart || isEnd) ? "fill-foreground font-bold" : "fill-foreground/80 font-medium"
                       )} style={{ fontSize: w < 80 ? '8px' : '10px' }}>
                       {name.length > 22 ? name.slice(0,20)+'…' : name}
                     </text>
+                    {/* Label A / B trên phòng */}
+                    {(isStart || isEnd) && hasRoute && (
+                      <g pointerEvents="none">
+                        <circle cx={x + w - 10} cy={y + 10} r={9} fill="#06b6d4" stroke="white" strokeWidth={2} />
+                        <text x={x + w - 10} y={y + 10} textAnchor="middle" dominantBaseline="middle"
+                          fontSize="8" fontWeight="800" fill="white">
+                          {isStart ? 'A' : 'B'}
+                        </text>
+                      </g>
+                    )}
                     {editMode && (
                       <rect x={x+w-8} y={y+h-8} width={10} height={10} rx={2}
                         fill="#3b82f6" opacity={0.8} style={{ cursor:'se-resize' }}
@@ -655,23 +966,21 @@ export default function HospitalMap() {
               })}
             </g>
 
-            {/* Nodes */}
+            {/* Nodes — chỉ hiện trong edit mode, ẩn hết khi có route */}
             <g>
               {Object.entries(nodes).map(([id, pos]) => {
-                const isPath = allHighlightedNodes.has(id);
-                if (hasRoute && !isPath && !editMode) return null;
-                const color = (tab === 'patient' && nodeSegmentColor[id]) ? nodeSegmentColor[id] : "#facc15";
+                if (!editMode) return null; // ẩn toàn bộ node khi không edit
                 return (
                   <g key={id} className="group">
-                    <circle cx={pos.x} cy={pos.y} r={editMode ? 7 : (isPath ? 5 : 3)}
-                      fill={isPath ? color : (editMode ? "#f97316" : "white")}
-                      stroke={isPath ? color : (editMode ? "#ea580c" : "#22c55e")}
+                    <circle cx={pos.x} cy={pos.y} r={7}
+                      fill="#f97316"
+                      stroke="#ea580c"
                       strokeWidth={1.5} className="transition-all"
-                      style={editMode ? { cursor:'move' } : {}}
-                      onPointerDown={editMode ? e => handleNodePointerDown(e, id) : undefined}
+                      style={{ cursor:'move' }}
+                      onPointerDown={e => handleNodePointerDown(e, id)}
                     />
                     <text x={pos.x} y={pos.y-10} fontSize="9" textAnchor="middle"
-                      className={cn("fill-foreground font-bold pointer-events-none", editMode ? "opacity-100" : "opacity-0 group-hover:opacity-100")}>
+                      className="fill-foreground font-bold pointer-events-none opacity-100">
                       {id}
                     </text>
                   </g>
@@ -695,22 +1004,7 @@ export default function HospitalMap() {
               );
             })}
 
-            {/* Manual route start/end markers */}
-            {tab === 'route' && manualPath && [
-              { roomName: startRoom, cls: "fill-primary/20", dot: "fill-primary" },
-              { roomName: endRoom,   cls: "fill-destructive/20", dot: "fill-destructive" },
-            ].map(({ roomName, cls, dot }) => {
-              const r = rooms.find((r: RoomDef) => r.name === roomName);
-              if (!r) return null;
-              const cx = r.bbox[0]+r.bbox[2]/2, cy = r.bbox[1]+r.bbox[3]/2;
-              return (
-                <g key={roomName}>
-                  <circle cx={cx} cy={cy} r={28} className={cn(cls,"animate-pulse pointer-events-none")} />
-                  <circle cx={cx} cy={cy} r={6}  className={cn(dot,"pointer-events-none")} />
-                  <circle cx={cx} cy={cy} r={2}  className="fill-white pointer-events-none" />
-                </g>
-              );
-            })}
+            {/* Manual route: A/B đã được render trực tiếp trên phòng ở block Rooms ở trên */}
           </svg>
         </div>
 
@@ -908,6 +1202,15 @@ export default function HospitalMap() {
 
               {manualPath && manualPath.path.length > 0 && !manualPath.error && (
                 <div className="space-y-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                    <div className="flex items-center justify-between rounded-lg border border-primary/20 bg-primary/5 px-3 py-2">
+                      <div className="flex items-center gap-2 text-xs font-semibold">
+                        <span className="w-5 h-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-[10px]">A</span>
+                        <ChevronRight className="w-3 h-3 text-muted-foreground" />
+                        <span className="w-5 h-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center text-[10px]">B</span>
+                      </div>
+                      <span className="text-[10px] text-muted-foreground">Đường đi vuông góc 90°</span>
+                    </div>
+                    
                   <h3 className="font-semibold text-foreground flex items-center gap-2 border-b border-border pb-3">
                     <Navigation className="w-4 h-4 text-primary" /> Lộ trình · ~{(manualPath.distance * 0.1).toFixed(0)}m
                   </h3>
@@ -936,8 +1239,8 @@ export default function HospitalMap() {
         <div className="p-3 border-t border-border bg-card/80">
           <div className="flex flex-wrap items-center gap-3 text-xs font-medium text-muted-foreground justify-center">
             <div className="flex items-center gap-1.5"><div className="w-4 h-1.5 bg-[#22c55e] rounded-full opacity-50" /> Hành lang</div>
-            <div className="flex items-center gap-1.5"><div className="w-4 h-1.5 bg-[#facc15] rounded-full" /> Đường đi</div>
-            <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-full border-[1.5px] border-[#22c55e] bg-white" /> Node</div>
+            <div className="flex items-center gap-1.5"><div className="w-4 h-1.5 bg-[#2563eb] rounded-full" /> Đường A → B</div>
+            <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-full border-[1.5px] border-[#22c55e] bg-white" /> Node hành lang</div>
           </div>
         </div>
       </div>
