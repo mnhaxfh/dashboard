@@ -35,7 +35,7 @@ app.use('/api', routes);
 const server = http.createServer(app);
 websocket.init(server);
 
-server.listen(PORT, () => {
-  console.log(`🚀 Local Ingestion Server đang chạy tại: http://localhost:${PORT}`);
-  console.log(`👉 Endpoint nhận API: POST http://localhost:${PORT}/api/touchpoint`);
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 Server đang chạy tại: http://0.0.0.0:${PORT}`);
+  console.log(`👉 Endpoint nhận API: POST http://0.0.0.0:${PORT}/api/touchpoint`);
 });
