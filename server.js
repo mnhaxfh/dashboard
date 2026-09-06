@@ -21,6 +21,11 @@ app.use(express.json());
 // Serve static files từ thư mục public/ (js, css, assets...)
 app.use(express.static(path.join(__dirname, 'public')));
 
+// / redirect về /dashboard
+app.get('/', (req, res) => {
+  res.redirect('/dashboard');
+});
+
 app.get('/admin', (req, res) => {
   res.sendFile(adminHtmlPath);
 });
