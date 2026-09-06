@@ -11,4 +11,4 @@ cmds = ["npm run build"]
 cmds = []
 
 [start]
-cmd = "caddy file-server --root /app/dist --listen :${PORT:-4173}"
+cmd = "caddy file-server --root /app/dist --listen :$PORT"
