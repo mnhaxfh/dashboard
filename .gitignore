@@ -4,3 +4,9 @@ docs/
 __pycache__/
 *.db
 node_modules/
+
+node_modules/
+hospital.db
+map/mapui/node_modules/
+map/mapui/dist/
+.vscode

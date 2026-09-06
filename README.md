@@ -212,3 +212,4 @@ Sinh **100 bệnh nhân ảo** đi qua các phòng trong khung 08:00–16:00, t�
 | 600x | ~48 giây |
 
 Giờ đến của bệnh nhân theo phân phối **Gaussian 2 đỉnh**: 9:00 và 14:00.
+Thêm chức năng demo thủ công, chọn bệnh nhân và chọn phòng khám.

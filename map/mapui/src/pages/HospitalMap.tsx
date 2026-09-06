@@ -14,9 +14,10 @@ function cn(...inputs: ClassValue[]) {
 }
 
 // ── Backend URL ────────────────────────────────────────────────────────
-const API_URL = (typeof window !== "undefined" && window.location.port === "5173")
-  ? "http://localhost:3000"
-  : window.location.origin;
+const API_URL = (import.meta as any).env?.VITE_API_URL
+  ?? ((typeof window !== "undefined" && window.location.port === "5173")
+    ? "http://localhost:3000"
+    : window.location.origin);
 
 // ── Patient types ──────────────────────────────────────────────────────
 type RoomStatus = { roomId: string; roomName: string; status: string };
@@ -634,33 +635,59 @@ export default function HospitalMap() {
 
   useEffect(() => { fetchPatients(); }, [fetchPatients]);
 
+  // ── Auto recompute route khi patients data thay đổi ──────────────────
+  useEffect(() => {
+    if (!selectedPatient) return;
+    const updated = patients.find(p => p.id === selectedPatient.id);
+    if (updated) handleSelectPatient(updated);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [patients]);
+
   // ── Select patient → compute multi-stop route ──────────────────────
   const handleSelectPatient = useCallback((p: Patient) => {
     setSelectedPatient(p);
     setManualPath(null);
 
-    // Determine remaining stops: rooms not yet "done"
-    // Order: current "progress"/"checkin" room first, then pending "none" rooms
-    const statusOrder = (s: string) => {
-      if (s === 'progress' || s === 'checkin' || s === 'waiting') return 0;
-      if (s === 'none') return 1;
-      return 2; // done — skip
-    };
-    const stops = p.roomStatuses
-      .filter(rs => rs.status !== 'done')
-      .sort((a, b) => statusOrder(a.status) - statusOrder(b.status))
-      .map(rs => rs.roomId);
+    // Giữ thứ tự gốc theo requiredRooms (không sort lộn)
+    const ordered = p.requiredRooms
+      .map(id => p.roomStatuses.find(rs => rs.roomId === id) ?? { roomId: id, roomName: id, status: 'none' });
 
-    if (stops.length < 2) {
-      // Only 1 or 0 stops remaining
-      if (stops.length === 1) {
-        setPatientRouteResult({ segments: [{ from: stops[0], to: stops[0], path: [stops[0]] }], totalDistance: 0, error: null });
-      } else {
-        setPatientRouteResult({ segments: [], totalDistance: 0, error: "Bệnh nhân đã hoàn thành tất cả các phòng." });
-      }
+    // Tìm index đầu tiên của phòng chưa done
+    const firstPendingIdx = ordered.findIndex(rs => rs.status !== 'done');
+
+    // Tất cả đã xong
+    if (firstPendingIdx === -1) {
+      setPatientRouteResult({ segments: [], totalDistance: 0, error: "Bệnh nhân đã hoàn thành tất cả các phòng." });
       return;
     }
-    const result = buildMultiStopPath(stops, rooms, nodes);
+
+    const firstPending = ordered[firstPendingIdx];
+    const isArrived = firstPending.status === 'checkin' || firstPending.status === 'progress' || firstPending.status === 'waiting';
+
+    // Chỉ hiển thị đúng 1 chặng:
+    // - BN chưa checkin phòng tiếp → vẽ đường từ phòng done liền trước đến phòng tiếp theo
+    // - BN đã checkin/progress/waiting → vẽ đường từ phòng đó đến phòng kế tiếp (nếu có)
+    let fromId: string;
+    let toId: string | null = null;
+
+    if (!isArrived && firstPendingIdx > 0) {
+      // Chưa đến: from = phòng done trước, to = phòng pending đầu tiên
+      fromId = ordered[firstPendingIdx - 1].roomId;
+      toId = firstPending.roomId;
+    } else {
+      // Đang ở phòng này: from = phòng hiện tại, to = phòng kế tiếp chưa done
+      fromId = firstPending.roomId;
+      const nextPending = ordered.slice(firstPendingIdx + 1).find(rs => rs.status !== 'done');
+      toId = nextPending?.roomId ?? null;
+    }
+
+    if (!toId) {
+      // Chỉ còn 1 phòng cuối, không có chặng tiếp
+      setPatientRouteResult({ segments: [{ from: fromId, to: fromId, path: [fromId] }], totalDistance: 0, error: null });
+      return;
+    }
+
+    const result = buildMultiStopPath([fromId, toId], rooms, nodes);
     setPatientRouteResult(result);
   }, [rooms, nodes]);
 
@@ -789,56 +816,24 @@ export default function HospitalMap() {
             {hasRoute && (
               <g pointerEvents="none">
                 {activeRoutePaths.map((route, idx) => {
-                  const color =
-                    tab === 'patient'
-                      ? segmentColors[route.index % segmentColors.length]
-                      : "#06b6d4"; // cyan-500 — xanh biển sáng đẹp với animation
+                  const color = tab === 'patient'
+                    ? segmentColors[route.index % segmentColors.length]
+                    : "#06b6d4";
 
                   return (
                     <g key={`route-${route.from}-${route.to}-${idx}`}>
                       {/* Layer 1: Glow ngoài — nhấp nháy nhẹ */}
-                      <path
-                        d={route.d}
-                        fill="none"
-                        stroke={color}
-                        strokeWidth={18}
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        className="path-glow"
-                      />
-
-                      {/* Layer 2: Nền đường liền (tối hơn màu chính) */}
-                      <path
-                        d={route.d}
-                        fill="none"
-                        stroke={color}
-                        strokeWidth={7}
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        opacity={0.55}
-                      />
-
+                      <path d={route.d} fill="none" stroke={color} strokeWidth={18}
+                        strokeLinecap="round" strokeLinejoin="round" className="path-glow" />
+                      {/* Layer 2: Nền đường liền */}
+                      <path d={route.d} fill="none" stroke={color} strokeWidth={7}
+                        strokeLinecap="round" strokeLinejoin="round" opacity={0.55} />
                       {/* Layer 3: Nét đứt chảy — hiệu ứng dòng chảy chính */}
-                      <path
-                        d={route.d}
-                        fill="none"
-                        stroke={color}
-                        strokeWidth={7}
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        className="path-flow"
-                      />
-
-                      {/* Layer 4: Shine — tia sáng chạy dọc tuyến đường */}
-                      <path
-                        d={route.d}
-                        fill="none"
-                        stroke="white"
-                        strokeWidth={3.5}
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        className="path-shine"
-                      />
+                      <path d={route.d} fill="none" stroke={color} strokeWidth={7}
+                        strokeLinecap="round" strokeLinejoin="round" className="path-flow" />
+                      {/* Layer 4: Shine */}
+                      <path d={route.d} fill="none" stroke="white" strokeWidth={3.5}
+                        strokeLinecap="round" strokeLinejoin="round" className="path-shine" />
                     </g>
                   );
                 })}
@@ -1151,7 +1146,7 @@ export default function HospitalMap() {
                               seg.from !== seg.to && (
                                 <div key={idx} className="flex items-center gap-1.5 text-[11px]">
                                   <span className="w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold text-white shrink-0"
-                                    style={{ background: segmentColors[idx % segmentColors.length] }}>{idx+1}</span>
+                                    style={{ background: segmentColors[idx % segmentColors.length] }}>{idx + 1}</span>
                                   <span className="font-medium">{seg.from}</span>
                                   <ChevronRight className="w-3 h-3 text-muted-foreground shrink-0" />
                                   <span className="font-medium">{seg.to}</span>

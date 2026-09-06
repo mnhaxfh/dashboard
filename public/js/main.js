@@ -4,6 +4,17 @@
 document.getElementById('jsonInput').value = JSON.stringify(INITIAL_INPUT_DATA, null, 2);
 initDataFromInput(INITIAL_INPUT_DATA);
 
+// ── Kết nối dropdown bệnh nhân → phòng → status ──────────────────────
+document.getElementById('eventPatient').addEventListener('change', function () {
+  updateRoomDropdownForPatient(this.value);
+});
+
+document.getElementById('eventRoom').addEventListener('change', function () {
+  const patientId = document.getElementById('eventPatient').value;
+  const patient = patients.find(p => p.id === patientId);
+  autoSuggestStatus(patient, this.value);
+});
+
 // Load rooms từ server → load patients → sync history
 loadRoomsFromServer().then(() => {
   loadPatientsFromServer().finally(syncHistoryFromServer);

@@ -20,10 +20,51 @@ function initDataFromInput(inputList) {
 }
 
 function updateSelectDropdowns() {
-  document.getElementById('eventPatient').innerHTML =
-    patients.map(p => `<option value="${p.id}">${p.id} - ${p.name}</option>`).join('');
-  document.getElementById('eventRoom').innerHTML =
-    rooms.map(r => `<option value="${r.id}">${r.id} - ${r.name}</option>`).join('');
+  const pSelect = document.getElementById('eventPatient');
+  const prevPatientId = pSelect.value;
+  pSelect.innerHTML = patients.map(p => `<option value="${p.id}">${p.id} - ${p.name}</option>`).join('');
+  // Giữ lại lựa chọn bệnh nhân nếu vẫn còn trong danh sách
+  if (prevPatientId && patients.find(p => p.id === prevPatientId)) {
+    pSelect.value = prevPatientId;
+  }
+  updateRoomDropdownForPatient(pSelect.value);
+}
+
+// Cập nhật dropdown phòng theo bệnh nhân đang chọn
+// Chỉ hiển thị các phòng trong lộ trình của bệnh nhân đó, kèm trạng thái hiện tại
+function updateRoomDropdownForPatient(patientId) {
+  const rSelect = document.getElementById('eventRoom');
+  const patient = patients.find(p => p.id === patientId);
+
+  if (!patient || !patient.path || patient.path.length === 0) {
+    // Fallback: hiện toàn bộ phòng nếu không tìm thấy bệnh nhân
+    rSelect.innerHTML = rooms.map(r => `<option value="${r.id}">${r.id} - ${r.name}</option>`).join('');
+    return;
+  }
+
+  const STATUS_EMOJI = { none: '⬜', checkin: '🟡', progress: '🔵', waiting: '🟠', done: '✅' };
+  const STATUS_LABEL_SHORT = { none: 'Chưa khám', checkin: 'Check-in', progress: 'Đang khám', waiting: 'Chờ KQ', done: 'Xong' };
+
+  rSelect.innerHTML = patient.path.map(step => {
+    const emoji = STATUS_EMOJI[step.status] || '⬜';
+    const label = STATUS_LABEL_SHORT[step.status] || step.status;
+    return `<option value="${step.roomId}">${emoji} ${step.roomId} - ${step.roomName} [${label}]</option>`;
+  }).join('');
+
+  // Tự động suggest trạng thái tiếp theo hợp lý cho phòng đang chọn
+  autoSuggestStatus(patient, rSelect.value);
+}
+
+// Suggest trạng thái tiếp theo dựa vào trạng thái hiện tại của phòng đó
+function autoSuggestStatus(patient, roomId) {
+  const step = patient && patient.path.find(s => s.roomId === roomId);
+  if (!step) return;
+
+  const NEXT_STATUS = { none: 'checkin', checkin: 'progress', progress: 'waiting', waiting: 'done', done: 'none' };
+  const nextStatus = NEXT_STATUS[step.status] || 'checkin';
+
+  const statusSelect = document.getElementById('eventStatus');
+  if (statusSelect) statusSelect.value = nextStatus;
 }
 
 // ── State bệnh nhân ────────────────────────────────────────────────────
@@ -60,6 +101,12 @@ function updatePatientStatusFromEvent(payload) {
       patient.path.push(newStep);
     }
     render();
+
+    // Refresh dropdown phòng nếu bệnh nhân này đang được chọn trong panel bắn sự kiện
+    const selectedPatientId = document.getElementById('eventPatient').value;
+    if (selectedPatientId === patient_id) {
+      updateRoomDropdownForPatient(patient_id);
+    }
   }
 }
 

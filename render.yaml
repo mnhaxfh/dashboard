@@ -1,0 +1,31 @@
+services:
+  # ── Service 1: Node.js Backend ─────────────────────────────────────
+  - type: web
+    name: hospital-backend
+    runtime: node
+    rootDir: .
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: PORT
+        value: 3000
+      - key: DB_PATH
+        value: /data/hospital.db
+      # Thay bằng URL thực của Map UI sau khi deploy xong
+      - key: CORS_ORIGIN
+        value: https://hospital-mapui.onrender.com
+    disk:
+      name: hospital-db
+      mountPath: /data
+      sizeGB: 1
+
+  # ── Service 2: Map UI (Static Site) ────────────────────────────────
+  - type: web
+    name: hospital-mapui
+    runtime: node
+    rootDir: map/mapui
+    buildCommand: npm install && npm run build
+    startCommand: npx serve dist -p $PORT --single
+    envVars:
+      - key: VITE_API_URL
+        value: https://hospital-backend.onrender.com

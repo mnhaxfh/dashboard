@@ -8,7 +8,14 @@ const websocket = require('./websocket');
 const routes = require('./routes');
 
 const app = express();
-app.use(cors());
+
+// CORS: cho phép domain từ env (Render) hoặc mọi origin khi dev local
+const corsOrigin = process.env.CORS_ORIGIN;
+app.use(cors(corsOrigin ? {
+  origin: [corsOrigin, /localhost/],
+  credentials: true
+} : {}));
+
 app.use(express.json());
 
 // Serve static files từ thư mục public/ (js, css, assets...)
