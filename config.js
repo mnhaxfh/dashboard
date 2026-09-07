@@ -30,7 +30,7 @@ module.exports = {
   ROOMS,
   // Tài khoản demo — lưu plaintext cho mục đích demo
   DEMO_USERS: [
-    { username: 'admin',    password: 'bvnamhoc2024' },
+    { username: 'admin',    password: 'bvnamhoc2026' },
     { username: 'bsnamhoc', password: 'demo@2024'    },
   ],
 };
