@@ -1013,7 +1013,8 @@ export default function HospitalMap() {
         </div>
 
         {/* Map controls */}
-        <div className="absolute top-4 right-4 flex flex-col gap-1 bg-card/90 backdrop-blur-sm p-1 rounded-lg shadow-sm border border-border z-10">
+        <div className="absolute top-4 right-4 flex flex-col gap-1 bg-card/90 backdrop-blur-sm p-1 rounded-lg shadow-sm border border-border z-10"
+          onPointerDown={e => e.stopPropagation()}>
           <button onClick={() => setTransform(t => ({...t, scale:t.scale*1.2}))} className="p-2 hover:bg-accent rounded-md transition-colors" title="Phóng to"><ZoomIn className="w-5 h-5" /></button>
           <button onClick={() => setTransform(t => ({...t, scale:t.scale/1.2}))} className="p-2 hover:bg-accent rounded-md transition-colors" title="Thu nhỏ"><ZoomOut className="w-5 h-5" /></button>
           <div className="h-px w-full bg-border my-1" />
@@ -1022,7 +1023,8 @@ export default function HospitalMap() {
 
         {/* Edit toolbar */}
         {editMode && (
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-card/95 backdrop-blur-sm px-4 py-2 rounded-full shadow-lg border border-border z-10">
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-card/95 backdrop-blur-sm px-4 py-2 rounded-full shadow-lg border border-border z-10"
+            onPointerDown={e => e.stopPropagation()}>
             <span className="text-xs text-muted-foreground mr-1">Nền:</span>
             <input type="range" min={0.05} max={1} step={0.05} value={floorOpacity} onChange={e => setFloorOpacity(Number(e.target.value))} className="w-24 accent-primary" />
             <div className="w-px h-5 bg-border mx-1" />
