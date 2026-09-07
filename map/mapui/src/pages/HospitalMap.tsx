@@ -14,8 +14,19 @@ function cn(...inputs: ClassValue[]) {
 }
 
 // ── Backend URL ────────────────────────────────────────────────────────
-const API_URL = (import.meta as any).env?.VITE_API_URL
-  ?? ((typeof window !== "undefined" && window.location.port === "5173")
+function sanitizeApiUrl(raw: string | undefined): string {
+  if (!raw) return '';
+  // Xóa trailing slash và path thừa, chỉ giữ origin
+  try {
+    const u = new URL(raw.startsWith('http') ? raw : `https://${raw}`);
+    return u.origin;
+  } catch {
+    return raw.replace(/\/+$/, '');
+  }
+}
+
+const API_URL = sanitizeApiUrl((import.meta as any).env?.VITE_API_URL)
+  || ((typeof window !== "undefined" && window.location.port === "5173")
     ? "http://localhost:3000"
     : window.location.origin);
 
